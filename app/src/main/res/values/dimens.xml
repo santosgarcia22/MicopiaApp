@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Altura típica de BottomNavigationView = 56dp; sumo 16dp de aire -->
+    <dimen name="bottom_bar_spacing">72dp</dimen>
+</resources>

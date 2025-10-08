@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.airsec">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="Airsec"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.airsec">
+
+        <!-- No tienen intent-filter -> exported=false -->
+        <activity android:name="com.example.airsec.PersonsActivity" android:exported="false" />
+        <activity android:name="com.example.airsec.TimesActivity"   android:exported="false" />
+        <activity android:name="com.example.airsec.FlightActivity"  android:exported="false" />
+        <activity android:name="com.example.airsec.FlightsActivity"  android:exported="false" />
+
+        <!-- Tiene intent-filter (MAIN/LAUNCHER) -> exported=true -->
+        <activity
+            android:name="com.example.airsec.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+
+</manifest>

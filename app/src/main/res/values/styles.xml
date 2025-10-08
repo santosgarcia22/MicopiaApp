@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Caja de texto con etiqueta flotante -->
+    <style name="FormFilledBox" parent="Widget.Material3.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@android:color/transparent</item>
+        <item name="boxStrokeColor">@color/brand_outline</item>
+        <item name="android:textColor">@color/brand_on_surface</item>
+        <item name="hintTextColor">@color/brand_outline</item>
+    </style>
+
+    <!-- Botón de acción (Guardar/Bloquear) -->
+    <style name="PrimaryButton" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/brand_primary</item>
+        <item name="android:textColor">@color/brand_on_primary</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+
+    <!-- Botones de navegación inferiores -->
+    <style name="NavButtonStyle" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/brand_primary</item>
+        <item name="android:textColor">@color/brand_on_primary</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <!-- Tarjeta contenedora -->
+    <style name="CardContainer">
+        <item name="android:background">@android:color/white</item>
+        <item name="android:padding">16dp</item>
+    </style>
+</resources>
