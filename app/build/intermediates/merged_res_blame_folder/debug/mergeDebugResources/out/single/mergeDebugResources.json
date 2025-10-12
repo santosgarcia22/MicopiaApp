@@ -1,0 +1,118 @@
+[
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_item_demora.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/item_demora.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_ic_badge_24.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/ic_badge_24.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_activity_procesos.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/activity_procesos.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_item_person.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/item_person.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_dialog_new_flight.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/dialog_new_flight.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_dialog_person_entry.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/dialog_person_entry.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_partial_bottom_nav.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/partial_bottom_nav.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_badge_green.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/badge_green.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_activity_flights.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/activity_flights.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_ic_add_24.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/ic_add_24.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_activity_flight.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/activity_flight.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_item_proceso.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/item_proceso.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_badge_state_open.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/badge_state_open.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_activity_main.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable-nodpi_airsecurity_logo.png.flat",
+        "source": "com.example.airsec.app-main-41:/drawable-nodpi/airsecurity_logo.png"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_badge_state_closed.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/badge_state_closed.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/xml_network_security_config.xml.flat",
+        "source": "com.example.airsec.app-main-41:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/menu_menu_bottom_nav.xml.flat",
+        "source": "com.example.airsec.app-main-41:/menu/menu_bottom_nav.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_bg_button_nav.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/bg_button_nav.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_badge_red.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/badge_red.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_ic_search_24.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/ic_search_24.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_ic_person_24.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/ic_person_24.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_activity_times.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/activity_times.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_ic_exit_24.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/ic_exit_24.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_ic_schedule_24.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/ic_schedule_24.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_partial_toolbar_logo.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/partial_toolbar_logo.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_activity_persons.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/activity_persons.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/drawable_bg_item_inner_border.xml.flat",
+        "source": "com.example.airsec.app-main-41:/drawable/bg_item_inner_border.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-debug-39:/layout_item_flight.xml.flat",
+        "source": "com.example.airsec.app-main-41:/layout/item_flight.xml"
+    }
+]

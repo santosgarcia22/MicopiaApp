@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.appbar.MaterialToolbar xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/toolbarFlights"
+    android:layout_width="match_parent"
+    android:layout_height="?attr/actionBarSize"
+    android:background="@color/brand_on_primary"
+    android:title=""
+    app:titleCentered="true"
+    app:contentInsetStartWithNavigation="0dp"
+    app:contentInsetEndWithActions="0dp"
+    app:contentInsetStart="0dp"
+    app:contentInsetEnd="0dp">
+
+    <!-- Logo centrado -->
+<androidx.appcompat.widget.AppCompatImageView
+android:id="@+id/imgLogoAirsecurity"
+android:layout_width="wrap_content"
+android:layout_height="35sp"
+android:layout_gravity="center"
+android:adjustViewBounds="true"
+android:scaleType="fitCenter"
+android:contentDescription="@string/app_name"
+app:srcCompat="@drawable/airsecurity_logo" />
+    </com.google.android.material.appbar.MaterialToolbar>

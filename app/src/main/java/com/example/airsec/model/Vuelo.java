@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import com.google.gson.annotations.SerializedName;
 
 @Entity(
         tableName = "control_aeronave_vuelos",
@@ -21,23 +22,47 @@ public class Vuelo {
     public String origen;
     public String destino;
 
-    @ColumnInfo(name = "numero_vuelo_llegando")
+//    @ColumnInfo(name = "numero_vuelo_llegando")
+    @SerializedName("numero_vuelo_llegando")
     public String numeroVueloLlegando;
 
-    @ColumnInfo(name = "numero_vuelo_saliendo")
+//    @ColumnInfo(name = "numero_vuelo_saliendo")
+    @SerializedName("numero_vuelo_saliendo")
     public String numeroVueloSaliendo;
 
     public String matricula;
 
-    @ColumnInfo(name = "operador_id") public Long operadorId;
-    @ColumnInfo(name = "posicion_llegada") public String posicionLlegada;
-    @ColumnInfo(name = "hora_llegada_real") public String horaLlegadaReal;
-    @ColumnInfo(name = "hora_salida_itinerario") public String horaSalidaItinerario;
-    @ColumnInfo(name = "hora_salida_pushback") public String horaSalidaPushback;
+//    @ColumnInfo(name = "operador_id")
 
-    @ColumnInfo(name = "total_pax") public Integer totalPax;
-    @ColumnInfo(name = "coordinador_id") public Long coordinadorId;
-    @ColumnInfo(name = "lider_vuelo_id") public Long liderVueloId;
+    @SerializedName("operador_id")
+    public Long operadorId;
+
+//    @ColumnInfo(name = "posicion_llegada")
+    @SerializedName("posicion_llegada")
+    public String posicionLlegada;
+//    @ColumnInfo(name = "hora_llegada_real")
+
+    @SerializedName("hora_llegada_real")
+    public String horaLlegadaReal;
+
+//    @ColumnInfo(name = "hora_salida_itinerario")
+    @SerializedName("hora_salida_itinerario")
+    public String horaSalidaItinerario;
+
+//    @ColumnInfo(name = "hora_salida_pushback")
+    @SerializedName("hora_salida_pushback")
+    public String horaSalidaPushback;
+
+//    @ColumnInfo(name = "total_pax")
+    @SerializedName("total_pax") public Integer totalPax;
+
+//    @ColumnInfo(name = "coordinador_id")
+    @SerializedName("coordinador_id") public Long coordinadorId;
+
+
+//    @ColumnInfo(name = "lider_vuelo_id")
+    @SerializedName("lider_vuelo_id")
+    public Long liderVueloId;
 
     // Flags locales
     @ColumnInfo(name = "app_bloqueado") public boolean appBloqueado;

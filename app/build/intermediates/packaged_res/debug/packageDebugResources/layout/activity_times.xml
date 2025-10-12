@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_surface">
+
+    <!-- Toolbar superior -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarTimes"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        app:title="Registro de tiempos"
+        app:titleTextColor="@android:color/white"
+        app:titleCentered="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ScrollView
+        android:id="@+id/scrollMain"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/toolbarTimes"
+        app:layout_constraintBottom_toTopOf="@+id/layoutNav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardUseCompatPadding="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <!-- Botones en grilla 2xN -->
+                    <GridLayout
+                        android:id="@+id/gridEventos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:rowOrderPreserved="false"
+                        android:useDefaultMargins="true">
+
+                        <!-- Desabordaje -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDesabordajeInicio"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Desabordaje Inicio" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDesabordajeFin"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Desabordaje Fin" />
+
+                        <!-- Abordaje -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAbordajeInicio"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Abordaje Inicio" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAbordajeFin"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Abordaje Fin" />
+
+                        <!-- Inspección cabina -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCabinaInicio"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Cabina Inicio" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCabinaFin"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Cabina Fin" />
+
+                        <!-- Aseo -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAseoIngreso"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Ingreso Aseo" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAseoSalida"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Salida Aseo" />
+
+                        <!-- Tripulación ingreso -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTripulacionIngreso"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Ingreso Tripulación" />
+
+                        <!-- Cierre puertas -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCierrePuerta"
+                            style="@style/PrimaryButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:text="Cierre Puertas" />
+                    </GridLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="12dp"
+                        android:text="Eventos registrados"
+                        android:textAlignment="center"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/contenedorChips"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingTop="4dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Barra de navegación fija abajo -->
+    <LinearLayout
+        android:id="@+id/layoutNav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="3"
+        android:padding="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNavCabecera"
+            style="@style/NavButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="General" />
+
+        <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNavTiempos"
+            style="@style/NavButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tiempos" />
+
+        <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNavPersonas"
+            style="@style/NavButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Personas" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

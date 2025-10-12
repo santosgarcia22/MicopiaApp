@@ -1,0 +1,58 @@
+[
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/activity_times.xml",
+        "source": "com.example.airsec.app-main-41:/layout/activity_times.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/activity_main.xml",
+        "source": "com.example.airsec.app-main-41:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/item_flight.xml",
+        "source": "com.example.airsec.app-main-41:/layout/item_flight.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/activity_flights.xml",
+        "source": "com.example.airsec.app-main-41:/layout/activity_flights.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/item_person.xml",
+        "source": "com.example.airsec.app-main-41:/layout/item_person.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/item_proceso.xml",
+        "source": "com.example.airsec.app-main-41:/layout/item_proceso.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/item_demora.xml",
+        "source": "com.example.airsec.app-main-41:/layout/item_demora.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/dialog_person_entry.xml",
+        "source": "com.example.airsec.app-main-41:/layout/dialog_person_entry.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/partial_bottom_nav.xml",
+        "source": "com.example.airsec.app-main-41:/layout/partial_bottom_nav.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/dialog_new_flight.xml",
+        "source": "com.example.airsec.app-main-41:/layout/dialog_new_flight.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/activity_procesos.xml",
+        "source": "com.example.airsec.app-main-41:/layout/activity_procesos.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/activity_persons.xml",
+        "source": "com.example.airsec.app-main-41:/layout/activity_persons.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/partial_toolbar_logo.xml",
+        "source": "com.example.airsec.app-main-41:/layout/partial_toolbar_logo.xml"
+    },
+    {
+        "merged": "com.example.airsec.app-mergeDebugResources-38:/layout/activity_flight.xml",
+        "source": "com.example.airsec.app-main-41:/layout/activity_flight.xml"
+    }
+]

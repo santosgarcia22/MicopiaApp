@@ -11,15 +11,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.airsec.adapter.FlightsAdapter;
-import com.example.airsec.database.AppDb;
 import com.example.airsec.model.Vuelo;
+//import com.example.airsec.adapter.VueloAdapter;
 import com.example.airsec.repo.FlightRepository;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class FlightsActivity extends AppCompatActivity {
@@ -34,6 +33,11 @@ public class FlightsActivity extends AppCompatActivity {
     private String searchText = "";
     private boolean filterAbiertos = true;
     private boolean filterCerrados = false;
+
+    private RecyclerView recycler;
+
+//    private VueloAdapter adapter;
+//    private List<Vuelo> vuelos = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,17 +108,39 @@ public class FlightsActivity extends AppCompatActivity {
     }
 
     private void cargar() {
-        new Thread(() -> {
-            List<Vuelo> list = AppDb.get(this).vueloDao().list();
-            if (list == null) list = Collections.emptyList();
-            final List<Vuelo> finalList = list;
-            runOnUiThread(() -> {
-                data.clear();
-                data.addAll(finalList);
-                aplicarFiltrosYMostrar();
-            });
-        }).start();
+        // Crea instancia del API
+        com.example.airsec.network.ApiService api =
+                com.example.airsec.network.ApiClient.getClient()
+                        .create(com.example.airsec.network.ApiService.class);
+
+        // Llamada (sin filtros para la primera página)
+        api.getVuelos(null, null, 1).enqueue(new retrofit2.Callback<com.example.airsec.network.ApiResponse<com.example.airsec.model.Vuelo>>() {
+            @Override
+            public void onResponse(retrofit2.Call<com.example.airsec.network.ApiResponse<com.example.airsec.model.Vuelo>> call,
+                                   retrofit2.Response<com.example.airsec.network.ApiResponse<com.example.airsec.model.Vuelo>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().data != null) {
+                    // Extraemos la lista real dentro del paginado
+                    java.util.List<com.example.airsec.model.Vuelo> list = response.body().data.data;
+                    if (list == null) list = new java.util.ArrayList<>();
+
+                    data.clear();
+                    data.addAll(list);
+                    aplicarFiltrosYMostrar();
+                } else {
+                    android.widget.Toast.makeText(FlightsActivity.this,
+                            "Error al obtener datos del servidor", android.widget.Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<com.example.airsec.network.ApiResponse<com.example.airsec.model.Vuelo>> call,
+                                  Throwable t) {
+                android.widget.Toast.makeText(FlightsActivity.this,
+                        "Fallo de conexión: " + t.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
     }
+
 
     private void aplicarFiltrosYMostrar() {
         String q = searchText.toLowerCase();
@@ -143,4 +169,9 @@ public class FlightsActivity extends AppCompatActivity {
     private static String safe(String s) {
         return s == null ? "" : s.toLowerCase();
     }
+
+
+
+
+
 }

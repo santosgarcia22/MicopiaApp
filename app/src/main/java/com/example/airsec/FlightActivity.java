@@ -22,8 +22,16 @@ import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import android.widget.ArrayAdapter;
 
+import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.List;
+import com.example.airsec.network.ApiClient;
+import com.example.airsec.network.ApiService;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 
 /** Cabecera del vuelo + dropdowns + mini-form de Demora (única por vuelo). */
 public class FlightActivity extends AppCompatActivity {
@@ -176,6 +184,7 @@ public class FlightActivity extends AppCompatActivity {
         new Thread(() -> {
             List<Operador> all = AppDb.get(this).operadorDao().all();
             boolean usarMock = (all == null || all.isEmpty());
+
 
             operadores.clear();
             coordinadores.clear();
@@ -388,6 +397,9 @@ public class FlightActivity extends AppCompatActivity {
             });
         }).start();
     }
+
+
+
 
     // ---- utils
     private static String nvl(String s) { return s == null ? "" : s; }

@@ -2,12 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.airsec">
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="Airsec"
         android:supportsRtl="true"
-        android:theme="@style/Theme.airsec">
+        android:theme="@style/Theme.airsec"
+        android:networkSecurityConfig="@xml/network_security_config">
+
 
         <!-- No tienen intent-filter -> exported=false -->
         <activity android:name="com.example.airsec.PersonsActivity" android:exported="false" />
