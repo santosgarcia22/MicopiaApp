@@ -11,7 +11,7 @@ public interface ApiService {
 
     // Obtiene lista de vuelos (paginada)
     @GET("vuelos")
-    Call<ApiResponse<Vuelo>> getVuelos(
+    Call<ApiResponseList<Vuelo>> getVuelos(
             @Query("q") String q,
             @Query("fecha") String fecha,
             @Query("page") Integer page
@@ -19,5 +19,5 @@ public interface ApiService {
 
     // Obtiene un vuelo por ID
     @GET("vuelos/{id}")
-    Call<ApiResponse<Vuelo>> getVueloById(@Path("id") long id);
+    Call<ApiResponseSingle<Vuelo>> getVueloById(@Path("id") long id);
 }

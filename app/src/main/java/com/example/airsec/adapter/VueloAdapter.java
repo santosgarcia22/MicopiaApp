@@ -28,7 +28,7 @@ public class VueloAdapter extends RecyclerView.Adapter<VueloAdapter.VueloViewHol
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VueloViewHolder holder, int position) {
+    public void  onBindViewHolder(@NonNull VueloViewHolder holder, int position) {
         Vuelo vuelo = vuelos.get(position);
 
         // --- Título principal ---
@@ -40,6 +40,8 @@ public class VueloAdapter extends RecyclerView.Adapter<VueloAdapter.VueloViewHol
             titulo = "— → —";
         }
         holder.tvTitulo.setText(titulo);
+
+        android.util.Log.d("VueloDebug", "Fecha: " + vuelo.fecha + " / Llegada: " + vuelo.horaLlegadaReal);
 
         // --- Subtítulo (origen, destino y fecha formateada) ---
         String fechaCorta = "Sin fecha";
@@ -76,23 +78,11 @@ public class VueloAdapter extends RecyclerView.Adapter<VueloAdapter.VueloViewHol
         );
     }
 
-    // Método auxiliar para formatear hora ISO
-    private String parseHora(String horaIso) {
-        if (horaIso == null || horaIso.isEmpty()) return "—";
-        try {
-            // intenta con formato completo ISO
-            java.text.SimpleDateFormat formatoEntrada =
-                    new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            java.text.SimpleDateFormat formatoSalida =
-                    new java.text.SimpleDateFormat("HH:mm");
-            java.util.Date date = formatoEntrada.parse(horaIso.substring(0, 19)); // corta el .000000Z
-            return formatoSalida.format(date);
-        } catch (Exception e) {
-            return "—";
-        }
+    //Método auxiliar para formatear hora ISO
+    private String parseHora(String hora) {
+        if (hora == null || hora.isEmpty()) return "—";
+        return hora; // Ya viene lista del backend como HH:mm
     }
-
-
 
     @Override
     public int getItemCount() {

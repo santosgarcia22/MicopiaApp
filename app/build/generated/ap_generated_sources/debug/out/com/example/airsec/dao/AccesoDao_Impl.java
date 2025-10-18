@@ -36,7 +36,7 @@ public final class AccesoDao_Impl implements AccesoDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR ABORT INTO `control_aeronave_accesos` (`id`,`vuelo_id`,`nombre`,`identificacion`,`empresa`,`herramientas`,`motivo_entrada`,`hora_entrada`,`hora_salida`,`hora_entrada1`,`hora_salida2`,`firma_path`,`created_at`,`updated_at`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `accesos` (`id`,`vuelo_id`,`nombre`,`identificacion`,`empresa`,`herramientas`,`motivo_entrada`,`hora_entrada`,`hora_salida`,`hora_entrada1`,`hora_salida2`,`firma_path`,`created_at`,`updated_at`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -109,7 +109,7 @@ public final class AccesoDao_Impl implements AccesoDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "DELETE FROM `control_aeronave_accesos` WHERE `id` = ?";
+        return "DELETE FROM `accesos` WHERE `id` = ?";
       }
 
       @Override
@@ -121,7 +121,7 @@ public final class AccesoDao_Impl implements AccesoDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `control_aeronave_accesos` SET `id` = ?,`vuelo_id` = ?,`nombre` = ?,`identificacion` = ?,`empresa` = ?,`herramientas` = ?,`motivo_entrada` = ?,`hora_entrada` = ?,`hora_salida` = ?,`hora_entrada1` = ?,`hora_salida2` = ?,`firma_path` = ?,`created_at` = ?,`updated_at` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `accesos` SET `id` = ?,`vuelo_id` = ?,`nombre` = ?,`identificacion` = ?,`empresa` = ?,`herramientas` = ?,`motivo_entrada` = ?,`hora_entrada` = ?,`hora_salida` = ?,`hora_entrada1` = ?,`hora_salida2` = ?,`firma_path` = ?,`created_at` = ?,`updated_at` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -234,7 +234,7 @@ public final class AccesoDao_Impl implements AccesoDao {
 
   @Override
   public List<Acceso> byVuelo(final long vueloId) {
-    final String _sql = "SELECT * FROM control_aeronave_accesos WHERE vuelo_id=? ORDER BY nombre ASC";
+    final String _sql = "SELECT * FROM accesos WHERE vuelo_id = ? ORDER BY nombre ASC";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
     _statement.bindLong(_argIndex, vueloId);
@@ -332,7 +332,7 @@ public final class AccesoDao_Impl implements AccesoDao {
 
   @Override
   public Acceso findByDoc(final long vueloId, final String doc) {
-    final String _sql = "SELECT * FROM control_aeronave_accesos WHERE vuelo_id=? AND identificacion=? LIMIT 1";
+    final String _sql = "SELECT * FROM accesos WHERE vuelo_id = ? AND identificacion = ? LIMIT 1";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 2);
     int _argIndex = 1;
     _statement.bindLong(_argIndex, vueloId);
@@ -436,7 +436,7 @@ public final class AccesoDao_Impl implements AccesoDao {
 
   @Override
   public Acceso byVueloAndDoc(final long vueloId, final String doc) {
-    final String _sql = "SELECT * FROM control_aeronave_accesos WHERE vuelo_id=? AND identificacion=? LIMIT 1";
+    final String _sql = "SELECT * FROM accesos WHERE vuelo_id = ? AND identificacion = ? LIMIT 1";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 2);
     int _argIndex = 1;
     _statement.bindLong(_argIndex, vueloId);

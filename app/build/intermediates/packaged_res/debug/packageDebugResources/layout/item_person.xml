@@ -22,10 +22,10 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="25dp"
+                android:layout_width="wrap_content"
                 android:layout_height="25dp"
                 android:src="@drawable/ic_person_24"
-                android:tint="@color/brand_primary" />
+                app:tint="@color/brand_primary"/>
 
             <TextView
                 android:id="@+id/tvNombre"
@@ -50,7 +50,7 @@
                 android:layout_width="25dp"
                 android:layout_height="25dp"
                 android:src="@drawable/ic_badge_24"
-                android:tint="@color/brand_primary" />
+                app:tint="@color/brand_primary" />
 
             <TextView
                 android:id="@+id/tvIdDoc"
@@ -79,7 +79,7 @@
                     android:layout_width="25dp"
                     android:layout_height="25dp"
                     android:src="@drawable/ic_schedule_24"
-                    android:tint="@color/brand_primary" />
+                    app:tint="@color/brand_primary" />
 
                 <TextView
                     android:id="@+id/tvDetalle"

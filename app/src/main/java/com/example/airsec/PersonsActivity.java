@@ -3,6 +3,7 @@ package com.example.airsec;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -37,6 +38,18 @@ public class PersonsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_persons);
+
+        flightId = getIntent().getLongExtra("flight_id", -1);
+
+        if (flightId == -1) {
+            Toast.makeText(this, "ID de vuelo no recibido", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        android.util.Log.d("PersonsActivity", "Vuelo asociado ID = " + flightId);
+        Toast.makeText(this, "Flight ID del Vuelo: " + flightId, Toast.LENGTH_SHORT).show();
+
 
         repo = new FlightRepository(this);
         flightId = getIntent().getLongExtra("flight_id", -1);
@@ -107,7 +120,7 @@ public class PersonsActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Registrar entrada")
                 .setView(view)
-                .setPositiveButton("Guardar", (d, w) -> {
+                .setPositiveButton("Guardar Acceso", (d, w) -> {
                     String nombre = textOf(etNombre);
                     String idDoc  = textOf(etIdent);
                     String emp    = textOf(etEmpresa);
@@ -131,6 +144,9 @@ public class PersonsActivity extends AppCompatActivity {
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
+
+
+
 
     // Helpers
     private String textOf(TextInputEditText e) {

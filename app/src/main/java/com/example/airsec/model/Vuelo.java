@@ -6,6 +6,8 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 import com.google.gson.annotations.SerializedName;
 
+import java.io.Serializable;
+
 @Entity(
         tableName = "control_aeronave_vuelos",
         indices = {
@@ -14,7 +16,8 @@ import com.google.gson.annotations.SerializedName;
                 @Index("created_by_user_id")
         }
 )
-public class Vuelo {
+public class Vuelo implements Serializable {
+    @SerializedName("id")
     @PrimaryKey(autoGenerate = true)
     public long id;
 
@@ -30,6 +33,7 @@ public class Vuelo {
     @SerializedName("numero_vuelo_saliendo")
     public String numeroVueloSaliendo;
 
+    @SerializedName("matricula")
     public String matricula;
 
 //    @ColumnInfo(name = "operador_id")

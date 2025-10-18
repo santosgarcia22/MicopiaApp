@@ -25,7 +25,7 @@ import com.example.airsec.model.Vuelo;
                 Acceso.class,
                 Operador.class
         },
-        version = 3,               // <-- súbelo si ya existía la DB en el emulador
+        version = 4,               // <-- súbelo si ya existía la DB en el emulador
         exportSchema = false       // evita el warning de export schema
 )
 public abstract class AppDb extends RoomDatabase {

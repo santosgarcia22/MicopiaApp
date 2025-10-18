@@ -14,6 +14,12 @@ import com.example.airsec.model.Acceso;
 import com.example.airsec.model.Demora;
 import com.example.airsec.model.TiemposOperativos;
 import com.example.airsec.model.Vuelo;
+import com.example.airsec.network.ApiResponseSingle;
+import com.example.airsec.network.ApiService;
+import com.example.airsec.network.ApiClient;
+import com.example.airsec.network.ApiResponse;
+
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -63,7 +69,30 @@ public class FlightRepository {
         return vueloDao.insert(v);
     }
 
-    public Vuelo obtenerVuelo(long id) { return vueloDao.get(id); }
+    public Vuelo obtenerVuelo(long id) {
+        // 1) intento traer desde API (bloqueante -> OK porque lo llamás desde background thread)
+        try {
+            ApiService api = ApiClient.getClient().create(ApiService.class);
+            retrofit2.Response<ApiResponseSingle<Vuelo>> resp = api.getVueloById(id).execute();
+
+            if (resp.isSuccessful() && resp.body() != null && resp.body().data != null) {
+                Vuelo remoto = resp.body().data;
+                // guarda local para uso offline (si tu DAO inserta/actualiza)
+                try {
+                    vueloDao.insert(remoto);
+                } catch (Exception ignored) { /* si da conflicto, lo ignoramos */ }
+                return remoto;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 2) fallback: si la API falla o no hay datos -> devuelve la copia local
+        return vueloDao.get(id);
+    }
+
+
+
 
     public List<Vuelo> listarVuelos() { return vueloDao.list(); }
 
@@ -191,34 +220,54 @@ public class FlightRepository {
             byte herramientas,
             String motivo
     ) {
-        // Busca por vuelo + documento
         com.example.airsec.model.Acceso a = accesoDao.byVueloAndDoc(vueloId, doc);
-
         String now = nowISO();
+
         if (a == null) {
-            // Crear registro mínimo y marcar E1
             a = new com.example.airsec.model.Acceso();
-            a.vueloId        = vueloId;
-            a.nombre         = nombre;
-            a.identificacion = doc;      // <-- si tu campo se llama distinto (idDocumento), cámbialo aquí
-            a.empresa        = empresa;
-            a.herramientas   = herramientas;
-            a.motivoEntrada  = motivo;
-            a.horaEntrada    = now;      // primera entrada
-            a.createdAt      = now;
-            a.updatedAt      = now;
+            a.vueloId = vueloId;
+            a.nombre = nombre;
+            a.identificacion = doc;
+            a.empresa = empresa;
+            a.herramientas = herramientas;
+            a.motivoEntrada = motivo;
+            a.horaEntrada = now;
+            a.createdAt = now;
+            a.updatedAt = now;
             accesoDao.insert(a);
         } else {
-            // Ya existe: si no tiene E1, márcala; si ya tiene E1 y S1, abre E2
             if (a.horaEntrada == null) {
                 a.horaEntrada = now;
             } else if (a.horaSalida != null && a.horaEntrada1 == null) {
-                a.horaEntrada1 = now; // segunda entrada
+                a.horaEntrada1 = now;
             }
             a.updatedAt = now;
             accesoDao.update(a);
         }
+
+        final Acceso accesoFinal = a; // 👈 variable final para usar dentro del Thread
+        // --- Enviar al servidor PHP (en background)
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("vuelo_id", vueloId);
+                json.put("nombre", nombre);
+                json.put("identificacion", doc);
+                json.put("empresa", empresa);
+                json.put("herramientas", herramientas);
+                json.put("motivo_entrada", motivo);
+                json.put("hora_entrada", accesoFinal.horaEntrada);
+                json.put("hora_salida", accesoFinal.horaSalida);
+                json.put("hora_entrada1", accesoFinal.horaEntrada1);
+                json.put("hora_salida2", accesoFinal.horaSalida2);
+
+                ApiClient.enviarAcceso(json);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
+
 
 
 

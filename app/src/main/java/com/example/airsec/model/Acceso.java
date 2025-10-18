@@ -6,7 +6,7 @@ import androidx.room.Index;
 import androidx.room.ColumnInfo;
 
 @Entity(
-        tableName = "control_aeronave_accesos",
+        tableName = "accesos",
         foreignKeys = @ForeignKey(
                 entity = Vuelo.class,
                 parentColumns = "id",
@@ -16,6 +16,7 @@ import androidx.room.ColumnInfo;
         indices = { @Index("vuelo_id"), @Index("identificacion"), @Index("empresa") }
 )
 public class Acceso {
+
     @PrimaryKey(autoGenerate = true) public long id;
 
     @ColumnInfo(name = "vuelo_id") public long vueloId;

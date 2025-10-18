@@ -3,6 +3,7 @@ package com.example.airsec;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,6 +17,7 @@ import com.example.airsec.database.AppDb;
 import com.example.airsec.model.Demora;
 import com.example.airsec.model.Operador;
 import com.example.airsec.model.Vuelo;
+import com.example.airsec.network.ApiResponseSingle;
 import com.example.airsec.repo.FlightRepository;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -104,19 +106,39 @@ public class FlightActivity extends AppCompatActivity {
         findViewById(R.id.btnIrListado).setEnabled(true);
     }
 
-    @Override protected void onCreate(Bundle savedInstanceState) {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        try {
         setContentView(R.layout.activity_flight);
 
-        // Toolbar
+        flightId = getIntent().getLongExtra("flight_id", -1);
+
+        // Debug rápido para confirmar qué ID llega
+        android.widget.Toast.makeText(this, "Flight ID del vuelo: " + flightId, android.widget.Toast.LENGTH_SHORT).show();
+        android.util.Log.d("FlightActivityDebug", "Flight ID recibido = " + flightId);
+
+        // === Toolbar ===
         MaterialToolbar tb = findViewById(R.id.toolbarFlight);
         setSupportActionBar(tb);
         if (getSupportActionBar() != null) getSupportActionBar().setTitle("Información del vuelo");
 
+        // === Inicializar repo y obtener ID ===
         repo = new FlightRepository(this);
-        flightId = getIntent().getLongExtra("flight_id", -1);
+        // Aseguramos capturar ambos posibles nombres del intent
 
-        // findViewById - cabecera
+
+        if (flightId == -1) {
+            flightId = getIntent().getLongExtra("flight_id", -1);
+        }
+
+        if (flightId <= 0) {
+            Toast.makeText(this, "Modo sin vuelo (solo vista)", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // === findViewById: cabecera ===
         etFecha = findViewById(R.id.etFecha);
         etDestino = findViewById(R.id.etDestino);
         etOrigenNumero = findViewById(R.id.etOrigenNumero);
@@ -129,7 +151,7 @@ public class FlightActivity extends AppCompatActivity {
         etHoraPushback = findViewById(R.id.etHoraPushback);
         etTotalPax = findViewById(R.id.etTotalPax);
 
-        // Demora
+        // === Demora ===
         etDemoraMotivo  = findViewById(R.id.etDemoraMotivo);
         etDemoraMinutos = findViewById(R.id.etDemoraMinutos);
         btnGuardarDemora = findViewById(R.id.btnGuardarDemora);
@@ -137,13 +159,13 @@ public class FlightActivity extends AppCompatActivity {
         tvDemoraResumen  = findViewById(R.id.tvDemoraResumen);
         cardDemoraResumen= findViewById(R.id.cardDemoraResumen);
 
-        // Dropdowns
+        // === Dropdowns ===
         dropOperador = findViewById(R.id.dropOperador);
         dropCoordinador = findViewById(R.id.dropCoordinador);
         setupExposedDropdown(dropOperador);
         setupExposedDropdown(dropCoordinador);
 
-        // Botones
+        // === Botones ===
         Button btnGuardar   = findViewById(R.id.btnGuardarVuelo);
         Button btnBloquear  = findViewById(R.id.btnBloquear);
         Button btnIrTiempos = findViewById(R.id.btnIrTiempos);
@@ -168,15 +190,20 @@ public class FlightActivity extends AppCompatActivity {
                 .setNegativeButton("Cancelar", null)
                 .show());
 
-        // Demora
         btnGuardarDemora.setOnClickListener(v -> guardarDemora());
         btnBorrarDemora.setOnClickListener(v -> borrarDemora());
 
-        // Cargar listas y luego cabecera + demora
+        // === Cargar datos ===
         cargarListasDropdowns(() -> {
-            cargarCabecera();
+            cargarCabecera();   // ahora ya seguro y con API
             cargarDemora();
         });
+
+
+        } catch (Exception e) {
+            Toast.makeText(this, "❌ Error iniciando actividad: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
     }
 
     /** Carga operadores/coordinadores desde Room; si no hay datos, usa mock. */
@@ -235,74 +262,168 @@ public class FlightActivity extends AppCompatActivity {
 
     private void cargarCabecera() {
         new Thread(() -> {
-            Vuelo f = repo.obtenerVuelo(flightId);
-            if (f == null) return;
-            final boolean cerrado = Boolean.TRUE.equals(f.appCerrado);
+            try {
+                Vuelo f = repo.obtenerVuelo(flightId);
 
-            runOnUiThread(() -> {
-                etFecha.setText(nvl(f.fecha));
-                etDestino.setText(nvl(f.destino));
-                etOrigenNumero.setText(nvl(f.origen));
-                etMatricula.setText(nvl(f.matricula));
-                etPosicion.setText(nvl(f.posicionLlegada));
-                etNumeroVueloLlegando.setText(nvl(f.numeroVueloLlegando));
-                etNumeroVueloSaliendo.setText(nvl(f.numeroVueloSaliendo));
-                etHoraLlegada.setText(nvl(f.horaLlegadaReal));
-                etHoraSalidaItinerario.setText(nvl(f.horaSalidaItinerario));
-                etHoraPushback.setText(nvl(f.horaSalidaPushback));
-                etTotalPax.setText(f.totalPax == null ? "" : String.valueOf(f.totalPax));
+                if (f == null) {
+                    ApiService api = ApiClient.getClient().create(ApiService.class);
 
-                if (f.operadorId != null) {
-                    int pos = indexOfId(operadores, f.operadorId);
-                    if (pos >= 0) {
-                        dropOperador.setText(operadores.get(pos).nombre, false);
-                        selectedOperadorId = operadores.get(pos).id;
-                    }
+                    api.getVueloById(flightId).enqueue(new Callback<ApiResponseSingle<Vuelo>>() {
+                        @Override
+                        public void onResponse(Call<ApiResponseSingle<Vuelo>> call,
+                                               Response<ApiResponseSingle<Vuelo>> response) {
+                            try {
+                                if (response.isSuccessful() && response.body() != null && response.body().data != null) {
+                                    Vuelo vuelo = response.body().data;
+                                    runOnUiThread(() -> {
+                                        try {
+                                            llenarCamposVuelo(vuelo);
+                                            Toast.makeText(FlightActivity.this, "Vuelo cargado desde servidor", Toast.LENGTH_SHORT).show();
+                                        } catch (Exception e) {
+                                            Toast.makeText(FlightActivity.this, "❌ Error llenando campos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            e.printStackTrace();
+                                        }
+                                    });
+                                } else {
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(FlightActivity.this, "⚠️ Vuelo no encontrado o respuesta vacía", Toast.LENGTH_LONG).show();
+                                        limpiarCampos();
+                                    });
+                                }
+                            } catch (Exception e) {
+                                runOnUiThread(() -> Toast.makeText(FlightActivity.this, "❌ Error procesando respuesta: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<ApiResponseSingle<Vuelo>> call, Throwable t) {
+                            runOnUiThread(() -> {
+                                Toast.makeText(FlightActivity.this, "🚫 Error de conexión: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                                limpiarCampos();
+                            });
+                            t.printStackTrace();
+                        }
+                    });
+                    return;
                 }
-                if (f.coordinadorId != null) {
-                    int pos = indexOfId(coordinadores, f.coordinadorId);
-                    if (pos >= 0) {
-                        dropCoordinador.setText(coordinadores.get(pos).nombre, false);
-                        selectedCoordinadorId = coordinadores.get(pos).id;
-                    }
-                }
 
-                setEnabledForm(!cerrado);
-                findViewById(R.id.btnCerrarVuelo).setEnabled(!cerrado);
-            });
+                final boolean cerrado = Boolean.TRUE.equals(f.appCerrado);
+
+                runOnUiThread(() -> {
+                    try {
+                        llenarCamposVuelo(f);
+                        setEnabledForm(!cerrado);
+                        findViewById(R.id.btnCerrarVuelo).setEnabled(!cerrado);
+                    } catch (Exception e) {
+                        Toast.makeText(FlightActivity.this, "❌ Error mostrando datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        e.printStackTrace();
+                    }
+                });
+
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(FlightActivity.this, "❌ Error cargando cabecera: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                e.printStackTrace();
+            }
         }).start();
     }
+
+
+    private void llenarCamposVuelo(Vuelo f) {
+        try {
+            etFecha.setText(formatDate(f.fecha));
+            etDestino.setText(nvl(f.destino));
+            etOrigenNumero.setText(nvl(f.origen));
+            etMatricula.setText(nvl(f.matricula));
+            etPosicion.setText(nvl(f.posicionLlegada));
+            etNumeroVueloLlegando.setText(nvl(f.numeroVueloLlegando));
+            etNumeroVueloSaliendo.setText(nvl(f.numeroVueloSaliendo));
+            etHoraLlegada.setText(nvl(f.horaLlegadaReal));
+            etHoraSalidaItinerario.setText(nvl(f.horaSalidaItinerario));
+            etHoraPushback.setText(nvl(f.horaSalidaPushback));
+            etTotalPax.setText(f.totalPax == null ? "" : String.valueOf(f.totalPax));
+
+            if (operadores != null && f.operadorId != null) {
+                int pos = indexOfId(operadores, f.operadorId);
+                if (pos >= 0) {
+                    dropOperador.setText(operadores.get(pos).nombre, false);
+                    selectedOperadorId = operadores.get(pos).id;
+                }
+            }
+
+            if (f.coordinadorId != null) {
+                int pos = indexOfId(coordinadores, f.coordinadorId);
+                if (pos >= 0) {
+                    dropCoordinador.setText(coordinadores.get(pos).nombre, false);
+                    selectedCoordinadorId = coordinadores.get(pos).id;
+                }
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "❌ Error llenando campos vuelo: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+    }
+
+
+    private void limpiarCampos() {
+        etFecha.setText(getFechaActual());
+        etDestino.setText("");
+        etOrigenNumero.setText("");
+        etMatricula.setText("");
+        etPosicion.setText("");
+        etNumeroVueloLlegando.setText("");
+        etNumeroVueloSaliendo.setText("");
+        etHoraLlegada.setText("");
+        etHoraSalidaItinerario.setText("");
+        etHoraPushback.setText("");
+        etTotalPax.setText("");
+
+        setEnabledForm(true);
+        findViewById(R.id.btnCerrarVuelo).setEnabled(false);
+    }
+
+
 
     private void guardarTodo() {
-        final String fecha = txt(etFecha), destino = txt(etDestino), origen = txt(etOrigenNumero),
-                matricula = txt(etMatricula), posicion = txt(etPosicion),
-                numLleg = txt(etNumeroVueloLlegando), numSal = txt(etNumeroVueloSaliendo),
-                hLleg = txt(etHoraLlegada), hItin = txt(etHoraSalidaItinerario), hPush = txt(etHoraPushback);
+        try {
+            final String fecha = txt(etFecha), destino = txt(etDestino), origen = txt(etOrigenNumero),
+                    matricula = txt(etMatricula), posicion = txt(etPosicion),
+                    numLleg = txt(etNumeroVueloLlegando), numSal = txt(etNumeroVueloSaliendo),
+                    hLleg = txt(etHoraLlegada), hItin = txt(etHoraSalidaItinerario), hPush = txt(etHoraPushback);
 
-        final Long opId = selectedOperadorId, coordId = selectedCoordinadorId;
-        final Integer pax = safeParseInt(txt(etTotalPax));
+            final Long opId = selectedOperadorId, coordId = selectedCoordinadorId;
+            final Integer pax = safeParseInt(txt(etTotalPax));
 
-        final String motivo = txt(etDemoraMotivo);
-        final Integer minutos = safeParseInt(txt(etDemoraMinutos));
+            final String motivo = txt(etDemoraMotivo);
+            final Integer minutos = safeParseInt(txt(etDemoraMinutos));
 
-        new Thread(() -> {
-            Vuelo f = repo.obtenerVuelo(flightId);
-            if (f != null && !Boolean.TRUE.equals(f.appCerrado)) {
-                f.fecha = fecha; f.destino = destino; f.origen = origen;
-                f.matricula = matricula; f.posicionLlegada = posicion;
-                f.numeroVueloLlegando = numLleg; f.numeroVueloSaliendo = numSal;
-                f.horaLlegadaReal = hLleg; f.horaSalidaItinerario = hItin; f.horaSalidaPushback = hPush;
-                f.totalPax = pax; f.operadorId = opId; f.coordinadorId = coordId;
-                repo.actualizarVuelo(f);
-            }
-            // Crea la demora solo si aún no existe y hay datos
-            if (!hasDemora && (!motivo.isEmpty() || minutos != null)) {
-                repo.guardarDemora(flightId, motivo, minutos, null);
-                hasDemora = true;
-            }
-            runOnUiThread(() -> Toast.makeText(this, "Datos guardados", Toast.LENGTH_SHORT).show());
-        }).start();
+            new Thread(() -> {
+                try {
+                    Vuelo f = repo.obtenerVuelo(flightId);
+                    if (f != null && !Boolean.TRUE.equals(f.appCerrado)) {
+                        f.fecha = fecha; f.destino = destino; f.origen = origen;
+                        f.matricula = matricula; f.posicionLlegada = posicion;
+                        f.numeroVueloLlegando = numLleg; f.numeroVueloSaliendo = numSal;
+                        f.horaLlegadaReal = hLleg; f.horaSalidaItinerario = hItin; f.horaSalidaPushback = hPush;
+                        f.totalPax = pax; f.operadorId = opId; f.coordinadorId = coordId;
+                        repo.actualizarVuelo(f);
+                    }
+                    if (!hasDemora && (!motivo.isEmpty() || minutos != null)) {
+                        repo.guardarDemora(flightId, motivo, minutos, null);
+                        hasDemora = true;
+                    }
+                    runOnUiThread(() -> Toast.makeText(this, "Datos guardados", Toast.LENGTH_SHORT).show());
+                } catch (Exception e) {
+                    runOnUiThread(() -> Toast.makeText(this, "❌ Error guardando: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                    e.printStackTrace();
+                }
+            }).start();
+        } catch (Exception e) {
+            Toast.makeText(this, "❌ Error preparando datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
     }
+
 
     private Integer safeParseInt(String s) {
         try { return TextUtils.isEmpty(s) ? null : Integer.parseInt(s); }
@@ -398,8 +519,24 @@ public class FlightActivity extends AppCompatActivity {
         }).start();
     }
 
+    private String formatDate(String raw) {
+        if (raw == null || raw.trim().isEmpty() || raw.equals("----")) return "";
+        try {
+            // Si el backend manda algo como 2025-10-13 o 2025-10-13T00:00:00.000Z
+            if (raw.contains("T")) raw = raw.split("T")[0];
+            String[] parts = raw.split("-");
+            if (parts.length == 3) {
+                return parts[2] + "/" + parts[1] + "/" + parts[0]; // dd/MM/yyyy
+            }
+        } catch (Exception ignored) {}
+        return raw;
+    }
 
 
+    private String getFechaActual() {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+        return sdf.format(new java.util.Date());
+    }
 
     // ---- utils
     private static String nvl(String s) { return s == null ? "" : s; }
