@@ -1,6 +1,7 @@
 package com.example.airsec.repo;
 
 import android.content.Context;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
@@ -25,6 +26,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import retrofit2.Call;
 
 public class FlightRepository {
 
@@ -211,6 +214,12 @@ public class FlightRepository {
         }
     }
 
+    private static String nowTimeHHmm() {
+        return new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                .format(new java.util.Date());
+    }
+
+
     /** Crea (o actualiza) el registro de acceso para el doc y marca la primera entrada. */
     public void crearOActualizarAccesoYPrimeraEntrada(
             long vueloId,
@@ -245,23 +254,126 @@ public class FlightRepository {
             accesoDao.update(a);
         }
 
-        final Acceso accesoFinal = a; // 👈 variable final para usar dentro del Thread
+        final Acceso accesoFinal = a;
+
         // --- Enviar al servidor PHP (en background)
         new Thread(() -> {
             try {
-                JSONObject json = new JSONObject();
-                json.put("vuelo_id", vueloId);
-                json.put("nombre", nombre);
-                json.put("identificacion", doc);
-                json.put("empresa", empresa);
-                json.put("herramientas", herramientas);
-                json.put("motivo_entrada", motivo);
-                json.put("hora_entrada", accesoFinal.horaEntrada);
-                json.put("hora_salida", accesoFinal.horaSalida);
-                json.put("hora_entrada1", accesoFinal.horaEntrada1);
-                json.put("hora_salida2", accesoFinal.horaSalida2);
+                String BASE_URL = "http://10.0.2.2:8000/api/v1/";
+                java.net.URL url = new java.net.URL(BASE_URL + "vuelos/" + vueloId + "/accesos");
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
 
-                ApiClient.enviarAcceso(json);
+                // helper para sacar HH:mm de varios formatos posibles
+                java.util.function.Function<String, String> timeHHmm = s -> {
+                    if (s == null || s.trim().isEmpty()) return null;
+                    try {
+                        // si viene como yyyy-MM-dd'T'HH:mm:ss
+                        if (s.contains("T")) {
+                            String part = s.split("T")[1];
+                            if (part.length() >= 5) return part.substring(0,5);
+                            return part;
+                        }
+                        // si viene como yyyy-MM-dd HH:mm:ss
+                        if (s.contains(" ")) {
+                            String part = s.split(" ")[1];
+                            if (part.length() >= 5) return part.substring(0,5);
+                            return part;
+                        }
+                        // si viene como HH:mm:ss
+                        if (s.length() >= 5 && s.contains(":")) return s.substring(0,5);
+                        // si ya es HH:mm
+                        return s;
+                    } catch (Exception ex) { return null; }
+                };
+
+                org.json.JSONObject json = new org.json.JSONObject();
+                json.put("nombre", accesoFinal.nombre == null ? "" : accesoFinal.nombre);
+                json.put("identificacion", accesoFinal.identificacion == null ? JSONObject.NULL : accesoFinal.identificacion);
+                json.put("empresa", accesoFinal.empresa == null ? JSONObject.NULL : accesoFinal.empresa);
+                // herramientas: asegurar integer 0/1
+                int herramientasVal = 0;
+                try { herramientasVal = accesoFinal.herramientas; } catch (Exception ignored) {}
+                json.put("herramientas", herramientasVal);
+
+                // nombre de campo esperado por tu API: motivo_entrada
+                json.put("motivo_entrada", accesoFinal.motivoEntrada == null ? JSONObject.NULL : accesoFinal.motivoEntrada);
+
+                // horas en formato HH:mm (o null)
+                String he = timeHHmm.apply(accesoFinal.horaEntrada);
+
+
+                if (he != null) json.put("hora_entrada", he);
+                else json.put("hora_entrada", JSONObject.NULL);
+
+                // log para depurar antes de enviar
+                android.util.Log.d("API_ACCESS_JSON", json.toString());
+
+                java.io.OutputStream os = conn.getOutputStream();
+                os.write(json.toString().getBytes("UTF-8"));
+                os.close();
+
+                int code = conn.getResponseCode();
+
+                // leer respuesta (útil para depurar errores 500)
+                java.io.InputStream is = (code < java.net.HttpURLConnection.HTTP_BAD_REQUEST) ? conn.getInputStream() : conn.getErrorStream();
+                java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) response.append(line);
+                br.close();
+
+                if (code == java.net.HttpURLConnection.HTTP_CREATED || code == java.net.HttpURLConnection.HTTP_OK) {
+                    android.util.Log.i("API_ACCESS", "✅ Acceso enviado correctamente al servidor: " + response);
+                } else {
+                    android.util.Log.e("API_ACCESS", "⚠️ Error al enviar acceso al servidor. Código HTTP: " + code + " -> " + response);
+                    // opcional: mostrar toast en la UI
+                    android.os.Handler h = new android.os.Handler(appContext.getMainLooper());
+                    h.post(() -> Toast.makeText(appContext, "Error al enviar acceso (servidor) " + code, Toast.LENGTH_SHORT).show());
+                }
+
+                conn.disconnect();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                android.os.Handler handler = new android.os.Handler(appContext.getMainLooper());
+                handler.post(() -> Toast.makeText(appContext, "⚠️ No se pudo enviar el acceso al servidor", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+
+    }
+
+    public void actualizarTiemposAccesoEnServidor(long vueloId, Acceso acceso) {
+        new Thread(() -> {
+            try {
+                String BASE_URL = "http://10.0.2.2:8000/api/v1/";
+                java.net.URL url = new java.net.URL(BASE_URL + "vuelos/" + vueloId + "/accesos/" + acceso.id);
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("PUT");
+                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                conn.setDoOutput(true);
+
+                JSONObject json = new JSONObject();
+                json.put("hora_salida", acceso.horaSalida);
+                json.put("hora_entrada1", acceso.horaEntrada1);
+                json.put("hora_salida2", acceso.horaSalida2);
+
+                java.io.OutputStream os = conn.getOutputStream();
+                os.write(json.toString().getBytes("UTF-8"));
+                os.close();
+
+                int code = conn.getResponseCode();
+                if (code == 200 || code == 201) {
+                    System.out.println("✅ Tiempos actualizados en el servidor");
+                } else {
+                    System.err.println("⚠️ Error al actualizar tiempos: HTTP " + code);
+                }
+
+                conn.disconnect();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -270,5 +382,25 @@ public class FlightRepository {
 
 
 
+
+
+    public void registrarAccesoEnServidor(long vueloId, Acceso acceso) {
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+
+        new Thread(() -> {
+            try {
+                Call<ApiResponseSingle<Acceso>> call = api.crearAcceso(vueloId, acceso);
+                retrofit2.Response<ApiResponseSingle<Acceso>> response = call.execute();
+
+                if (response.isSuccessful() && response.body() != null && response.body().ok) {
+                    System.out.println("✅ Acceso registrado en servidor ID=" + response.body().data.id);
+                } else {
+                    System.err.println("⚠️ Error registrando acceso: " + response.code());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
 
 }

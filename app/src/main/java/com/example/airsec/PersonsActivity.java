@@ -131,14 +131,23 @@ public class PersonsActivity extends AppCompatActivity {
                         toast("Nombre e identificación son requeridos");
                         return;
                     }
+
+                    // 💾 Guardar localmente + enviar al servidor en segundo plano
                     new Thread(() -> {
+
+                        try {
                         // crea registro si no existe + marca la primera entrada
                         repo.crearOActualizarAccesoYPrimeraEntrada(
                                 flightId, nombre, idDoc, emp, tools, mot);
                         runOnUiThread(() -> {
-                            toast("Entrada registrada");
+                            toast("✅ Acceso guardado localmente y enviado al servidor");
                             cargar();
                         });
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            runOnUiThread(() -> toast("❌ Error al guardar acceso"  + e.getMessage()));
+                        }
                     }).start();
                 })
                 .setNegativeButton("Cancelar", null)

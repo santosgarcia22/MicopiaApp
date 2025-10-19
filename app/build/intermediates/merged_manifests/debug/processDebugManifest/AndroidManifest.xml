@@ -26,7 +26,8 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:testOnly="true"
-        android:theme="@style/Theme.airsec" >
+        android:theme="@style/Theme.airsec"
+        android:usesCleartextTraffic="true" >
 
         <!-- No tienen intent-filter -> exported=false -->
         <activity

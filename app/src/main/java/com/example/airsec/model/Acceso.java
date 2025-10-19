@@ -4,6 +4,9 @@ import androidx.room.PrimaryKey;
 import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.ColumnInfo;
+import com.google.gson.annotations.SerializedName;
+
+import java.io.Serializable;
 
 @Entity(
         tableName = "accesos",
@@ -17,7 +20,8 @@ import androidx.room.ColumnInfo;
 )
 public class Acceso {
 
-    @PrimaryKey(autoGenerate = true) public long id;
+    @PrimaryKey(autoGenerate = true)
+    public long id;
 
     @ColumnInfo(name = "vuelo_id") public long vueloId;
 
