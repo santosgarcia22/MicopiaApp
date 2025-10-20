@@ -1,6 +1,7 @@
 package com.example.airsec.repo;
 
 import android.content.Context;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -94,9 +95,6 @@ public class FlightRepository {
         return vueloDao.get(id);
     }
 
-
-
-
     public List<Vuelo> listarVuelos() { return vueloDao.list(); }
 
     public List<Vuelo> buscarVuelos(String q) { return vueloDao.search("%"+q+"%"); }
@@ -149,7 +147,6 @@ public class FlightRepository {
         a.updatedAt = a.createdAt;
         return accesoDao.insert(a);
     }
-
 
     // --------- DEMORA (única por vuelo) ---------
 
@@ -351,7 +348,11 @@ public class FlightRepository {
         new Thread(() -> {
             try {
                 String BASE_URL = "http://10.0.2.2:8000/api/v1/";
-                java.net.URL url = new java.net.URL(BASE_URL + "vuelos/" + vueloId + "/accesos/" + acceso.id);
+                String fullUrl = BASE_URL + "vuelos/" + vueloId + "/accesos/" + acceso.id;
+
+                Log.d("API_ACCESS", "🌐 Enviando PUT a: " + fullUrl);
+
+                java.net.URL url = new java.net.URL(fullUrl);
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("PUT");
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -362,43 +363,27 @@ public class FlightRepository {
                 json.put("hora_entrada1", acceso.horaEntrada1);
                 json.put("hora_salida2", acceso.horaSalida2);
 
+                Log.d("API_ACCESS", "📤 JSON a enviar: " + json.toString());
+
                 java.io.OutputStream os = conn.getOutputStream();
                 os.write(json.toString().getBytes("UTF-8"));
                 os.close();
 
                 int code = conn.getResponseCode();
-                if (code == 200 || code == 201) {
-                    System.out.println("✅ Tiempos actualizados en el servidor");
-                } else {
-                    System.err.println("⚠️ Error al actualizar tiempos: HTTP " + code);
-                }
+                Log.d("API_ACCESS", "📡 Código HTTP: " + code);
+
+                java.io.InputStream is = (code >= 200 && code < 400)
+                        ? conn.getInputStream()
+                        : conn.getErrorStream();
+
+                java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+                String response = s.hasNext() ? s.next() : "";
+                Log.d("API_ACCESS", "📥 Respuesta del servidor: " + response);
 
                 conn.disconnect();
+
             } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-
-
-
-
-    public void registrarAccesoEnServidor(long vueloId, Acceso acceso) {
-        ApiService api = ApiClient.getClient().create(ApiService.class);
-
-        new Thread(() -> {
-            try {
-                Call<ApiResponseSingle<Acceso>> call = api.crearAcceso(vueloId, acceso);
-                retrofit2.Response<ApiResponseSingle<Acceso>> response = call.execute();
-
-                if (response.isSuccessful() && response.body() != null && response.body().ok) {
-                    System.out.println("✅ Acceso registrado en servidor ID=" + response.body().data.id);
-                } else {
-                    System.err.println("⚠️ Error registrando acceso: " + response.code());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+                Log.e("API_ACCESS", "❌ Error en PUT", e);
             }
         }).start();
     }
