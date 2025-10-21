@@ -1,14 +1,15 @@
 package com.example.airsec.network;
 
 import com.example.airsec.model.Acceso;
+import com.example.airsec.model.Demora;
 import com.example.airsec.model.Vuelo;
 import retrofit2.Call;
 import java.util.List;
-import com.example.airsec.model.Acceso;
 import com.example.airsec.network.ApiResponseSingle;
-
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 import okhttp3.MultipartBody;
@@ -16,6 +17,8 @@ import okhttp3.RequestBody;
 import retrofit2.http.Multipart;
 import retrofit2.http.Part;
 import retrofit2.http.POST;
+import com.example.airsec.network.DemoraRequest;
+import com.example.airsec.network.ApiResponseList;
 public interface ApiService {
 
     // Obtiene lista de vuelos (paginada)
@@ -53,6 +56,39 @@ public interface ApiService {
             @Part("hora_salida2") RequestBody horaSalida2,
             @Part MultipartBody.Part firma
     );
+
+
+    // --- DEMORAS ---
+    @POST("vuelos/{vueloId}/demoras")
+    Call<ApiResponseSingle<Demora>> crearDemora(
+            @Path("vueloId") long vueloId,
+            @Body DemoraRequest body
+    );
+
+    @PUT("vuelos/{vueloId}/demoras/{id}")
+    Call<ApiResponseSingle<Demora>> actualizarDemora(
+            @Path("vueloId") long vueloId,
+            @Path("id") long demoraId,
+            @Body DemoraRequest body
+    );
+
+    @GET("vuelos/{vueloId}/demoras")
+    Call<ApiResponseList<Demora>> listarDemoras(
+            @Path("vueloId") long vueloId
+    );
+
+    @GET("vuelos/{vueloId}/demoras/{id}")
+    Call<ApiResponseSingle<Demora>> getDemora(
+            @Path("vueloId") long vueloId,
+            @Path("id") long demoraId
+    );
+
+    @DELETE("vuelos/{vueloId}/demoras/{id}")
+    Call<ApiResponseSingle<Object>> eliminarDemora(
+            @Path("vueloId") long vueloId,
+            @Path("id") long demoraId
+    );
+
 
 
 }

@@ -60,10 +60,45 @@ public class PersonsActivity extends AppCompatActivity {
 
         adapter = new PersonAdapter(
                 // onEntrada
-                person -> registrarEntrada(person.identificacion),
+                person -> {
+                    new Thread(() -> {
+                        repo.registrarEntradaPorDoc(flightId, person.identificacion);
+
+                        // 🔄 obtener acceso actualizado
+                        Acceso actualizado = repo.obtenerAccesoPorDoc(flightId, person.identificacion);
+
+                        // 🌐 enviar al servidor
+                        if (actualizado != null) {
+                            repo.actualizarTiemposAccesoEnServidor(flightId, actualizado);
+                        }
+
+                        runOnUiThread(() -> {
+                            toast("Entrada registrada y enviada al servidor");
+                            cargar();
+                        });
+                    }).start();
+                },
                 // onSalida
-                person -> registrarSalida(person.identificacion)
+                person -> {
+                    new Thread(() -> {
+                        repo.registrarSalidaPorDoc(flightId, person.identificacion);
+
+                        // 🔄 obtener acceso actualizado
+                        Acceso actualizado = repo.obtenerAccesoPorDoc(flightId, person.identificacion);
+
+                        // 🌐 enviar al servidor
+                        if (actualizado != null) {
+                            repo.actualizarTiemposAccesoEnServidor(flightId, actualizado);
+                        }
+
+                        runOnUiThread(() -> {
+                            toast("Salida registrada y enviada al servidor");
+                            cargar();
+                        });
+                    }).start();
+                }
         );
+
         rv.setAdapter(adapter);
 
         // Nav inferior

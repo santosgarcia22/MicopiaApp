@@ -10,6 +10,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -462,61 +463,62 @@ public class FlightActivity extends AppCompatActivity {
 
     // ----- Demora
 
-    /** Carga demora y estado del vuelo en background; actualiza UI en main. */
+    /** Carga demora y estado del vuelo en background; actualiza UI en main.  por la versión async:*/
     private void cargarDemora() {
-        new Thread(() -> {
-            Demora d = repo.obtenerDemora(flightId);
-            Vuelo f = repo.obtenerVuelo(flightId);
-            final boolean editable = !(f != null && Boolean.TRUE.equals(f.appCerrado));
+        // 1) leer local en background y pintar en UI
+        repo.obtenerDemoraAsync(flightId, d -> pintarDemoraEnUI(d));
 
-            runOnUiThread(() -> {
-                hasDemora = (d != null);
-                if (hasDemora) {
-                    etDemoraMotivo.setText(nvl(d.motivo));
-                    etDemoraMinutos.setText(d.minutos == null ? "" : String.valueOf(d.minutos));
-                    String resumen = (d.minutos == null ? "" : (d.minutos + " min")) +
-                            (TextUtils.isEmpty(d.motivo) ? "" : " · " + d.motivo);
-                    tvDemoraResumen.setText(resumen);
-                } else {
-                    etDemoraMotivo.setText("");
-                    etDemoraMinutos.setText("");
-                    tvDemoraResumen.setText("");
-                }
-                setDemoraUiEnabled(editable);
-            });
-        }).start();
+        // 2) (opcional) sincronizar desde servidor y repintar
+        repo.sincronizarDemora(flightId,
+                () -> repo.obtenerDemoraAsync(flightId, d -> pintarDemoraEnUI(d)),
+                msg -> Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        );
     }
+
+    private void pintarDemoraEnUI(@Nullable Demora d) {
+        if (d == null) {
+            tvDemoraResumen.setText("Sin demora");
+            cardDemoraResumen.setVisibility(View.GONE);
+            return;
+        }
+        cardDemoraResumen.setVisibility(View.VISIBLE);
+        tvDemoraResumen.setText("Motivo: " + (d.motivo==null?"":d.motivo) +
+                "  ·  Minutos: " + (d.minutos==null?0:d.minutos));
+        // opcional: setear los EditText con lo que hay
+        etDemoraMotivo.setText(d.motivo != null ? d.motivo : "");
+        etDemoraMinutos.setText(d.minutos != null ? String.valueOf(d.minutos) : "");
+    }
+
+
 
     private void guardarDemora() {
-        if (hasDemora) return;
-        final String motivo = txt(etDemoraMotivo);
-        final Integer minutos = safeParseInt(txt(etDemoraMinutos));
-        new Thread(() -> {
-            repo.guardarDemora(flightId, motivo, minutos, null);
-            runOnUiThread(() -> {
-                hasDemora = true;
-                String resumen = (minutos == null ? "" : (minutos + " min")) +
-                        (TextUtils.isEmpty(motivo) ? "" : " · " + motivo);
-                tvDemoraResumen.setText(resumen);
-                setDemoraUiEnabled(true);
-                Toast.makeText(this, "Demora registrada", Toast.LENGTH_SHORT).show();
-            });
-        }).start();
+        String motivo = etDemoraMotivo.getText().toString();
+        int minutos = 0;
+        try { minutos = Integer.parseInt(etDemoraMinutos.getText().toString().trim()); } catch (Exception ignored) {}
+
+        // Guardar local + enviar a servidor
+        repo.guardarDemoraYEnviar(flightId, motivo, minutos, /*agenteId*/ null,
+                () -> runOnUiThread(() -> {
+                    Toast.makeText(this, "Demora guardada", Toast.LENGTH_SHORT).show();
+                    cargarDemora(); // refresca UI
+                }),
+                msg -> runOnUiThread(() -> Toast.makeText(this, msg, Toast.LENGTH_LONG).show())
+        );
     }
 
+
     private void borrarDemora() {
-        if (!hasDemora) return;
-        new Thread(() -> {
-            repo.eliminarDemora(flightId);
-            runOnUiThread(() -> {
-                hasDemora = false;
-                etDemoraMotivo.setText("");
-                etDemoraMinutos.setText("");
-                tvDemoraResumen.setText("");
-                setDemoraUiEnabled(true);
-                Toast.makeText(this, "Demora eliminada", Toast.LENGTH_SHORT).show();
-            });
-        }).start();
+        new AlertDialog.Builder(this)
+                .setTitle("Eliminar demora")
+                .setMessage("¿Desea eliminar la demora de este vuelo?")
+                .setPositiveButton("Eliminar", (d,w) -> {
+                    repo.eliminarDemoraAsync(flightId, () -> {
+                        Toast.makeText(this, "Demora eliminada", Toast.LENGTH_SHORT).show();
+                        cargarDemora();
+                    });
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private String formatDate(String raw) {

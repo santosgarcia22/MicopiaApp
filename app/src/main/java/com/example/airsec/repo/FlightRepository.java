@@ -20,15 +20,20 @@ import com.example.airsec.network.ApiResponseSingle;
 import com.example.airsec.network.ApiService;
 import com.example.airsec.network.ApiClient;
 import com.example.airsec.network.ApiResponse;
-
-import org.json.JSONObject;
-
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
-
+import java.util.TimeZone;
+import org.json.JSONObject;
+import java.util.List;
 import retrofit2.Call;
+import com.example.airsec.network.ApiResponseList;
+import com.example.airsec.network.DemoraRequest;
+import retrofit2.Callback;
+import retrofit2.Response;
+import android.view.View;
+import android.widget.Toast;
 
 public class FlightRepository {
 
@@ -41,6 +46,7 @@ public class FlightRepository {
     private final Context appContext;
 
 
+
     public FlightRepository(Context ctx) {
         this.appContext = ctx.getApplicationContext();
         AppDb db = AppDb.get(ctx);
@@ -50,6 +56,7 @@ public class FlightRepository {
         demoraDao  = db.demoraDao();
         operadorDao= db.operadorDao();
     }
+
 
     private static String nowISO() {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(new Date());
@@ -348,20 +355,16 @@ public class FlightRepository {
         new Thread(() -> {
             try {
                 String BASE_URL = "http://10.0.2.2:8000/api/v1/";
-                String fullUrl = BASE_URL + "vuelos/" + vueloId + "/accesos/" + acceso.id;
-
-                Log.d("API_ACCESS", "🌐 Enviando PUT a: " + fullUrl);
-
-                java.net.URL url = new java.net.URL(fullUrl);
+                java.net.URL url = new java.net.URL(BASE_URL + "vuelos/" + vueloId + "/accesos/" + acceso.id);
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("PUT");
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 conn.setDoOutput(true);
 
                 JSONObject json = new JSONObject();
-                json.put("hora_salida", acceso.horaSalida);
-                json.put("hora_entrada1", acceso.horaEntrada1);
-                json.put("hora_salida2", acceso.horaSalida2);
+                json.put("hora_salida", extraerHora(acceso.horaSalida));
+                json.put("hora_entrada1", extraerHora(acceso.horaEntrada1));
+                json.put("hora_salida2", extraerHora(acceso.horaSalida2));
 
                 Log.d("API_ACCESS", "📤 JSON a enviar: " + json.toString());
 
@@ -372,20 +375,206 @@ public class FlightRepository {
                 int code = conn.getResponseCode();
                 Log.d("API_ACCESS", "📡 Código HTTP: " + code);
 
-                java.io.InputStream is = (code >= 200 && code < 400)
+                java.io.InputStream is = (code < 400)
                         ? conn.getInputStream()
                         : conn.getErrorStream();
 
-                java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
-                String response = s.hasNext() ? s.next() : "";
+                String response = new java.util.Scanner(is).useDelimiter("\\A").next();
                 Log.d("API_ACCESS", "📥 Respuesta del servidor: " + response);
 
                 conn.disconnect();
-
             } catch (Exception e) {
-                Log.e("API_ACCESS", "❌ Error en PUT", e);
+                e.printStackTrace();
             }
         }).start();
     }
+
+
+
+    public Acceso obtenerAccesoPorDoc(long vueloId, String doc) {
+        return AppDb.get(appContext).accesoDao().byVueloAndDoc(vueloId, doc);
+    }
+
+    private String extraerHora(String valor) {
+        if (valor == null || valor.isEmpty()) return null;
+
+        // Si viene como "2025-10-20T19:44:51"
+        if (valor.contains("T")) {
+            try {
+                return valor.split("T")[1].substring(0, 5); // "19:44"
+            } catch (Exception e) {
+                return valor;
+            }
+        }
+
+        // Si ya viene en formato "19:44" lo deja igual
+        if (valor.matches("\\d{2}:\\d{2}")) {
+            return valor;
+        }
+
+        return valor;
+    }
+
+
+    //   CALLBACKS SIMPLES PARA LA DEMORA
+
+    public interface OnOk { void run(); }
+    public interface OnError { void onError(String msg); }
+
+
+    //  PARA EL REGISTRO DE DEMORA LOCAL PRIMERO + SYNC
+
+    /** Guarda local y sincroniza con servidor (POST o PUT según exista). */
+    public void guardarDemoraYEnviar(long vueloId,
+                                     String motivo,
+                                     int minutos,
+                                     @Nullable Long agenteId,
+                                     OnOk onOk,
+                                     @Nullable OnError onError) {
+
+        // 1) Guardar local (no perder datos si falla red)
+        new Thread(() -> {
+            try {
+                guardarDemora(vueloId, motivo, minutos, agenteId);
+            } catch (Exception e) {
+                if (onError != null) onError.onError("Error guardando local: " + e.getMessage());
+                return;
+            }
+
+            // 2) Consultar servidor para decidir POST/PUT
+            ApiService api = ApiClient.getClient().create(ApiService.class);
+            api.listarDemoras(vueloId).enqueue(new Callback<ApiResponseList<Demora>>() {
+                @Override
+                public void onResponse(Call<ApiResponseList<Demora>> call,
+                                       Response<ApiResponseList<Demora>> respList) {
+                    boolean existeRemota = false;
+                    long remotaId = 0;
+
+                    if (respList.isSuccessful() && respList.body() != null && respList.body().ok) {
+                        // Tu wrapper: body().data  -> DataWrapper<Demora>
+                        // Lista real: body().data.data -> List<Demora>
+                        java.util.List<Demora> lista = (respList.body().data != null) ? respList.body().data.data : null;
+                        if (lista != null && !lista.isEmpty()) {
+                            existeRemota = true;
+                            remotaId = lista.get(0).id; // 1 demora por vuelo
+                        }
+                    }
+
+                    DemoraRequest body = new DemoraRequest(motivo, minutos, agenteId);
+
+                    if (!existeRemota) {
+                        // POST crear
+                        api.crearDemora(vueloId, body).enqueue(new Callback<ApiResponseSingle<Demora>>() {
+                            @Override
+                            public void onResponse(Call<ApiResponseSingle<Demora>> call,
+                                                   Response<ApiResponseSingle<Demora>> resp) {
+                                if (!resp.isSuccessful() || resp.body() == null || !resp.body().ok) {
+                                    String msg = "HTTP " + resp.code();
+                                    try { if (resp.errorBody()!=null) msg += " - " + resp.errorBody().string(); } catch (Exception ignored) {}
+                                    if (onError != null) onError.onError("No se pudo crear en servidor: " + msg);
+                                    return;
+                                }
+                                Demora dSrv = resp.body().data;
+                                new Thread(() -> {
+                                    demoraDao.upsert(dSrv);
+                                    if (onOk != null) onOk.run();
+                                }).start();
+                            }
+
+                            @Override
+                            public void onFailure(Call<ApiResponseSingle<Demora>> call, Throwable t) {
+                                if (onError != null) onError.onError("Error de red (crear): " + t.getMessage());
+                            }
+                        });
+
+                    } else {
+                        // PUT actualizar
+                        api.actualizarDemora(vueloId, remotaId, body).enqueue(new Callback<ApiResponseSingle<Demora>>() {
+                            @Override
+                            public void onResponse(Call<ApiResponseSingle<Demora>> call,
+                                                   Response<ApiResponseSingle<Demora>> resp) {
+                                if (!resp.isSuccessful() || resp.body() == null || !resp.body().ok) {
+                                    String msg = "HTTP " + resp.code();
+                                    try { if (resp.errorBody()!=null) msg += " - " + resp.errorBody().string(); } catch (Exception ignored) {}
+                                    if (onError != null) onError.onError("No se pudo actualizar en servidor: " + msg);
+                                    return;
+                                }
+                                Demora dSrv = resp.body().data;
+                                new Thread(() -> {
+                                    demoraDao.upsert(dSrv);
+                                    if (onOk != null) onOk.run();
+                                }).start();
+                            }
+
+                            @Override
+                            public void onFailure(Call<ApiResponseSingle<Demora>> call, Throwable t) {
+                                if (onError != null) onError.onError("Error de red (actualizar): " + t.getMessage());
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ApiResponseList<Demora>> call, Throwable t) {
+                    if (onError != null) onError.onError("No se pudo verificar demoras en servidor: " + t.getMessage());
+                }
+            });
+
+        }).start();
+    }
+
+    public void sincronizarDemora(long vueloId, OnOk onOk, @Nullable OnError onError) {
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        api.listarDemoras(vueloId).enqueue(new Callback<ApiResponseList<Demora>>() {
+            @Override
+            public void onResponse(Call<ApiResponseList<Demora>> call,
+                                   Response<ApiResponseList<Demora>> resp) {
+                if (!resp.isSuccessful() || resp.body()==null || !resp.body().ok) {
+                    if (onError != null) onError.onError("No se pudo sincronizar demoras");
+                    return;
+                }
+                new Thread(() -> {
+                    java.util.List<Demora> remotas = (resp.body().data != null) ? resp.body().data.data : null;
+                    if (remotas != null) {
+                        for (Demora d : remotas) demoraDao.upsert(d);
+                    }
+                    if (onOk != null) onOk.run();
+                }).start();
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponseList<Demora>> call, Throwable t) {
+                if (onError != null) onError.onError("Error de red: " + t.getMessage());
+            }
+        });
+
+    }
+
+
+    // Crear una interfaz simple para callback
+    public interface OnResult<T> { void onResult(@Nullable T value); }
+
+    // Usar un executor simple
+    private static final java.util.concurrent.Executor DB_IO =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+
+    // Obtener demora en background y devolver por callback
+    public void obtenerDemoraAsync(long vueloId, OnResult<Demora> cb) {
+        DB_IO.execute(() -> {
+            Demora d = demoraDao.byVuelo(vueloId);   // ← ahora SÍ fuera del UI
+            new android.os.Handler(android.os.Looper.getMainLooper())
+                    .post(() -> cb.onResult(d));     // devuelves en el hilo principal
+        });
+    }
+
+    // (Opcional) también haz async el eliminar:
+    public void eliminarDemoraAsync(long vueloId, OnOk onOk) {
+        DB_IO.execute(() -> {
+            demoraDao.deleteByVuelo(vueloId);
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(onOk::run);
+        });
+    }
+
+
 
 }
