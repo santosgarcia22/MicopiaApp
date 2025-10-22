@@ -13,7 +13,7 @@ import java.util.List;
 @Dao
 public interface VueloDao {
 
-    @Insert
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
     long insert(Vuelo v);
 
     @Update

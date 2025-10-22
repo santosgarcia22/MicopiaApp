@@ -466,11 +466,22 @@ public class FlightActivity extends AppCompatActivity {
     /** Carga demora y estado del vuelo en background; actualiza UI en main.  por la versión async:*/
     private void cargarDemora() {
         // 1) leer local en background y pintar en UI
-        repo.obtenerDemoraAsync(flightId, d -> pintarDemoraEnUI(d));
+        repo.obtenerDemoraAsync(flightId, d -> {
+            pintarDemoraEnUI(d);
+            setDemoraUIState(d);
+
+            //por manejo de banderas:
+            hasDemora = (d != null); // evita estados viejos
+        });
+
 
         // 2) (opcional) sincronizar desde servidor y repintar
         repo.sincronizarDemora(flightId,
-                () -> repo.obtenerDemoraAsync(flightId, d -> pintarDemoraEnUI(d)),
+                () -> repo.obtenerDemoraAsync(flightId, d -> {
+                    pintarDemoraEnUI(d);
+                    setDemoraUIState(d);
+                    hasDemora = (d != null); // evita estados viejos
+                }),
                 msg -> Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         );
     }
@@ -493,14 +504,24 @@ public class FlightActivity extends AppCompatActivity {
 
     private void guardarDemora() {
         String motivo = etDemoraMotivo.getText().toString();
+        String minStr = etDemoraMinutos.getText().toString();
+        if (motivo.isEmpty()){
+            Toast.makeText(this, "Debes especificar un motivo", Toast.LENGTH_SHORT).show();
+            return;
+        }
         int minutos = 0;
-        try { minutos = Integer.parseInt(etDemoraMinutos.getText().toString().trim()); } catch (Exception ignored) {}
+        try { minutos = Integer.parseInt(etDemoraMinutos.getText().toString().trim()); } catch (Exception e) {minutos = 0;}
+
+        if (minutos <= 0) {
+            Toast.makeText(this, "Minutos debe ser > 0", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         // Guardar local + enviar a servidor
         repo.guardarDemoraYEnviar(flightId, motivo, minutos, /*agenteId*/ null,
                 () -> runOnUiThread(() -> {
                     Toast.makeText(this, "Demora guardada", Toast.LENGTH_SHORT).show();
-                    cargarDemora(); // refresca UI
+                    cargarDemora(); // refresca UI y aplicaria el SetDemoraUIState
                 }),
                 msg -> runOnUiThread(() -> Toast.makeText(this, msg, Toast.LENGTH_LONG).show())
         );
@@ -512,14 +533,24 @@ public class FlightActivity extends AppCompatActivity {
                 .setTitle("Eliminar demora")
                 .setMessage("¿Desea eliminar la demora de este vuelo?")
                 .setPositiveButton("Eliminar", (d,w) -> {
-                    repo.eliminarDemoraAsync(flightId, () -> {
-                        Toast.makeText(this, "Demora eliminada", Toast.LENGTH_SHORT).show();
-                        cargarDemora();
-                    });
+                    btnBorrarDemora.setEnabled(false); //evitar el doble tap
+                    repo.eliminarDemoraLocalYServidor(
+                            flightId,
+                            () -> runOnUiThread(() -> {
+                                Toast.makeText(this, "Demora eliminada", Toast.LENGTH_SHORT).show();
+                                cargarDemora(); // esto repinta y re-habilita campos
+                            }),
+                            msg -> runOnUiThread(() -> {
+                                btnBorrarDemora.setEnabled(true);
+                                Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+
+                            })
+                    );
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
+
 
     private String formatDate(String raw) {
         if (raw == null || raw.trim().isEmpty() || raw.equals("----")) return "";
@@ -533,6 +564,35 @@ public class FlightActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
         return raw;
     }
+
+
+    private void setDemoraUIState(@Nullable Demora d) {
+        boolean existe = (d != null);
+
+        etDemoraMotivo.setEnabled(!existe);
+        etDemoraMinutos.setEnabled(!existe);
+        btnGuardarDemora.setEnabled(!existe);
+        btnGuardarDemora.setAlpha(!existe ? 1f : 0.4f);
+
+        // 🔧 fuerza visibilidad + enabled del botón eliminar
+        btnBorrarDemora.setVisibility(existe ? View.VISIBLE : View.GONE);
+        btnBorrarDemora.setEnabled(existe);
+        btnBorrarDemora.setAlpha(existe ? 1f : 0.4f);
+
+        // Tarjeta/resumen
+        if (existe) {
+            cardDemoraResumen.setVisibility(View.VISIBLE);
+            tvDemoraResumen.setText("Motivo: " + (d.motivo==null?"":d.motivo) +
+                    "  ·  Minutos: " + (d.minutos==null?0:d.minutos));
+        } else {
+            cardDemoraResumen.setVisibility(View.GONE);
+            tvDemoraResumen.setText("");
+            // Si quieres dejar los campos limpios cuando NO hay demora:
+             etDemoraMotivo.setText("");
+             etDemoraMinutos.setText("");
+        }
+    }
+
 
 
     private String getFechaActual() {

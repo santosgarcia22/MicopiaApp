@@ -9,6 +9,7 @@ import com.example.airsec.network.ApiResponseSingle;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.Headers;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
@@ -19,6 +20,8 @@ import retrofit2.http.Part;
 import retrofit2.http.POST;
 import com.example.airsec.network.DemoraRequest;
 import com.example.airsec.network.ApiResponseList;
+import com.google.gson.JsonElement;
+
 public interface ApiService {
 
     // Obtiene lista de vuelos (paginada)
@@ -89,6 +92,20 @@ public interface ApiService {
             @Path("id") long demoraId
     );
 
+    //PRUEBA DE RAW PARA LAS DEMORAS
+    @Headers("Accept: application/json")
+    @GET("vuelos/{vueloId}/demoras")
+    Call<JsonElement> listarDemorasRaw(@Path("vueloId") long vueloId);
 
+    @Headers("Accept: application/json")
+    @POST("vuelos/{vueloId}/demoras")
+    Call<JsonElement> crearDemoraRaw(@Path("vueloId") long vueloId, @Body DemoraRequest body);
 
+    @Headers("Accept: application/json")
+    @PUT("vuelos/{vueloId}/demoras/{id}")
+    Call<JsonElement> actualizarDemoraRaw(@Path("vueloId") long vueloId, @Path("id") long demoraId, @Body DemoraRequest body);
+
+    @Headers("Accept: application/json")
+    @DELETE("vuelos/{vueloId}/demoras/{id}")
+    Call<JsonElement> eliminarDemoraRaw(@Path("vueloId") long vueloId, @Path("id") long demoraId);
 }

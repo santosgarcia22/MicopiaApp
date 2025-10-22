@@ -16,6 +16,7 @@ import com.example.airsec.model.Acceso;
 import com.example.airsec.model.Demora;
 import com.example.airsec.model.TiemposOperativos;
 import com.example.airsec.model.Vuelo;
+import com.example.airsec.network.ApiJson;
 import com.example.airsec.network.ApiResponseSingle;
 import com.example.airsec.network.ApiService;
 import com.example.airsec.network.ApiClient;
@@ -30,6 +31,8 @@ import java.util.List;
 import retrofit2.Call;
 import com.example.airsec.network.ApiResponseList;
 import com.example.airsec.network.DemoraRequest;
+import com.google.gson.JsonElement;
+
 import retrofit2.Callback;
 import retrofit2.Response;
 import android.view.View;
@@ -160,11 +163,17 @@ public class FlightRepository {
     public Demora obtenerDemora(long vueloId) { return demoraDao.byVuelo(vueloId); }
 
     public long guardarDemora(long vueloId, String motivo, Integer minutos, @Nullable Long agenteId) {
+        //asegura FK
+
+        ensureVueloInRoom(vueloId);
+
         Demora d = demoraDao.byVuelo(vueloId);
         if (d == null) {
             d = new Demora();
             d.vueloId = vueloId;
+            d.createdAt = nowISO();
         }
+        d.vueloId = (d.vueloId == 0) ? vueloId : d.vueloId;
         d.motivo = motivo;
         d.minutos = minutos;
         d.agenteId = agenteId;
@@ -416,8 +425,42 @@ public class FlightRepository {
     }
 
 
-    //   CALLBACKS SIMPLES PARA LA DEMORA
+    // Asegura que el vuelo padre exista en Room (evita FOREIGN KEY fail)
+    private void ensureVueloInRoom(long vueloId) {
+        Vuelo v = vueloDao.get(vueloId);
+        if (v != null) return;
 
+        // 1) Intentar traerlo del backend (bloqueante, ya estamos fuera del UI)
+        try {
+            ApiService api = ApiClient.getClient().create(ApiService.class);
+            retrofit2.Response<com.example.airsec.network.ApiResponseSingle<Vuelo>> r =
+                    api.getVueloById(vueloId).execute();
+            if (r.isSuccessful() && r.body() != null) {
+                Vuelo remoto = r.body().data; // ajusta si tu ApiResponseSingle tiene wrapper
+                if (remoto != null) {
+                    // inserta/replace para garantizar presencia
+                    vueloDao.insert(remoto);
+                    return;
+                }
+            }
+        } catch (Exception ignore) { /* seguimos con stub */ }
+
+        // 2) Si no se pudo desde el backend, inserta un stub con mínimos NO NULL
+        Vuelo stub = new Vuelo();
+        stub.id = vueloId;
+        // Campos mínimos para no violar NOT NULL (ajusta si tu @Entity los exige)
+        String now = nowISO();
+        stub.fecha = todayISO();
+        stub.appBloqueado = false;
+        stub.appCerrado = false;
+        stub.createdAt = now;
+        stub.updatedAt = now;
+
+        vueloDao.insert(stub); // con REPLACE, ver paso 2
+    }
+
+
+    //   CALLBACKS SIMPLES PARA LA DEMORA
     public interface OnOk { void run(); }
     public interface OnError { void onError(String msg); }
 
@@ -435,6 +478,8 @@ public class FlightRepository {
         // 1) Guardar local (no perder datos si falla red)
         new Thread(() -> {
             try {
+                //asegura FK antes de guardar local
+                ensureVueloInRoom(vueloId);
                 guardarDemora(vueloId, motivo, minutos, agenteId);
             } catch (Exception e) {
                 if (onError != null) onError.onError("Error guardando local: " + e.getMessage());
@@ -443,17 +488,16 @@ public class FlightRepository {
 
             // 2) Consultar servidor para decidir POST/PUT
             ApiService api = ApiClient.getClient().create(ApiService.class);
-            api.listarDemoras(vueloId).enqueue(new Callback<ApiResponseList<Demora>>() {
+
+        // 1) Verificar si existe demora remota (GET raw)
+            api.listarDemorasRaw(vueloId).enqueue(new Callback<JsonElement>() {
                 @Override
-                public void onResponse(Call<ApiResponseList<Demora>> call,
-                                       Response<ApiResponseList<Demora>> respList) {
+                public void onResponse(Call<JsonElement> call, Response<JsonElement> respList) {
                     boolean existeRemota = false;
                     long remotaId = 0;
 
-                    if (respList.isSuccessful() && respList.body() != null && respList.body().ok) {
-                        // Tu wrapper: body().data  -> DataWrapper<Demora>
-                        // Lista real: body().data.data -> List<Demora>
-                        java.util.List<Demora> lista = (respList.body().data != null) ? respList.body().data.data : null;
+                    if (respList.isSuccessful() && ApiJson.ok(respList.body())) {
+                        List<Demora> lista = ApiJson.getList(ApiJson.data(respList.body()), Demora.class);
                         if (lista != null && !lista.isEmpty()) {
                             existeRemota = true;
                             remotaId = lista.get(0).id; // 1 demora por vuelo
@@ -463,51 +507,52 @@ public class FlightRepository {
                     DemoraRequest body = new DemoraRequest(motivo, minutos, agenteId);
 
                     if (!existeRemota) {
-                        // POST crear
-                        api.crearDemora(vueloId, body).enqueue(new Callback<ApiResponseSingle<Demora>>() {
+                        // 2) POST (raw)
+                        api.crearDemoraRaw(vueloId, body).enqueue(new Callback<JsonElement>() {
                             @Override
-                            public void onResponse(Call<ApiResponseSingle<Demora>> call,
-                                                   Response<ApiResponseSingle<Demora>> resp) {
-                                if (!resp.isSuccessful() || resp.body() == null || !resp.body().ok) {
+                            public void onResponse(Call<JsonElement> call, Response<JsonElement> resp) {
+                                if (!resp.isSuccessful() || !ApiJson.ok(resp.body())) {
                                     String msg = "HTTP " + resp.code();
                                     try { if (resp.errorBody()!=null) msg += " - " + resp.errorBody().string(); } catch (Exception ignored) {}
                                     if (onError != null) onError.onError("No se pudo crear en servidor: " + msg);
                                     return;
                                 }
-                                Demora dSrv = resp.body().data;
+                                Demora dSrv = ApiJson.getObject(ApiJson.data(resp.body()), Demora.class);
                                 new Thread(() -> {
-                                    demoraDao.upsert(dSrv);
+                                    ensureVueloInRoom(vueloId);
+                                    if (dSrv != null && dSrv.vueloId <= 0) dSrv.vueloId = vueloId;
+                                    if (dSrv != null) demoraDao.upsert(dSrv);
                                     if (onOk != null) onOk.run();
                                 }).start();
                             }
 
-                            @Override
-                            public void onFailure(Call<ApiResponseSingle<Demora>> call, Throwable t) {
+                            @Override public void onFailure(Call<JsonElement> call, Throwable t) {
                                 if (onError != null) onError.onError("Error de red (crear): " + t.getMessage());
                             }
                         });
 
                     } else {
-                        // PUT actualizar
-                        api.actualizarDemora(vueloId, remotaId, body).enqueue(new Callback<ApiResponseSingle<Demora>>() {
+                        // 3) PUT (raw)
+                        api.actualizarDemoraRaw(vueloId, remotaId, body).enqueue(new Callback<JsonElement>() {
                             @Override
-                            public void onResponse(Call<ApiResponseSingle<Demora>> call,
-                                                   Response<ApiResponseSingle<Demora>> resp) {
-                                if (!resp.isSuccessful() || resp.body() == null || !resp.body().ok) {
+                            public void onResponse(Call<JsonElement> call, Response<JsonElement> resp) {
+                                if (!resp.isSuccessful() || !ApiJson.ok(resp.body())) {
                                     String msg = "HTTP " + resp.code();
                                     try { if (resp.errorBody()!=null) msg += " - " + resp.errorBody().string(); } catch (Exception ignored) {}
                                     if (onError != null) onError.onError("No se pudo actualizar en servidor: " + msg);
                                     return;
                                 }
-                                Demora dSrv = resp.body().data;
+                                Demora dSrv = ApiJson.getObject(ApiJson.data(resp.body()), Demora.class);
                                 new Thread(() -> {
-                                    demoraDao.upsert(dSrv);
+                                    // ⬅️ asegura FK y refuerza vueloId ANTES del upsert remoto
+                                    ensureVueloInRoom(vueloId);
+                                    if (dSrv != null && dSrv.vueloId <= 0) dSrv.vueloId = vueloId;
+                                    if (dSrv != null) demoraDao.upsert(dSrv);
                                     if (onOk != null) onOk.run();
                                 }).start();
                             }
 
-                            @Override
-                            public void onFailure(Call<ApiResponseSingle<Demora>> call, Throwable t) {
+                            @Override public void onFailure(Call<JsonElement> call, Throwable t) {
                                 if (onError != null) onError.onError("Error de red (actualizar): " + t.getMessage());
                             }
                         });
@@ -515,7 +560,7 @@ public class FlightRepository {
                 }
 
                 @Override
-                public void onFailure(Call<ApiResponseList<Demora>> call, Throwable t) {
+                public void onFailure(Call<JsonElement> call, Throwable t) {
                     if (onError != null) onError.onError("No se pudo verificar demoras en servidor: " + t.getMessage());
                 }
             });
@@ -525,29 +570,30 @@ public class FlightRepository {
 
     public void sincronizarDemora(long vueloId, OnOk onOk, @Nullable OnError onError) {
         ApiService api = ApiClient.getClient().create(ApiService.class);
-        api.listarDemoras(vueloId).enqueue(new Callback<ApiResponseList<Demora>>() {
+        api.listarDemorasRaw(vueloId).enqueue(new Callback<JsonElement>() {
             @Override
-            public void onResponse(Call<ApiResponseList<Demora>> call,
-                                   Response<ApiResponseList<Demora>> resp) {
-                if (!resp.isSuccessful() || resp.body()==null || !resp.body().ok) {
+            public void onResponse(Call<JsonElement> call, Response<JsonElement> resp) {
+                if (!resp.isSuccessful() || !ApiJson.ok(resp.body())) {
                     if (onError != null) onError.onError("No se pudo sincronizar demoras");
                     return;
                 }
                 new Thread(() -> {
-                    java.util.List<Demora> remotas = (resp.body().data != null) ? resp.body().data.data : null;
+                    List<Demora> remotas = ApiJson.getList(ApiJson.data(resp.body()), Demora.class);
+                    ensureVueloInRoom(vueloId); // <-- garantiza padre
                     if (remotas != null) {
-                        for (Demora d : remotas) demoraDao.upsert(d);
+                        for (Demora d : remotas) {
+                            if (d.vueloId <= 0) d.vueloId = vueloId; // <-- refuerzo
+                            demoraDao.upsert(d);
+                        }
                     }
                     if (onOk != null) onOk.run();
                 }).start();
             }
-
             @Override
-            public void onFailure(Call<ApiResponseList<Demora>> call, Throwable t) {
+            public void onFailure(Call<JsonElement> call, Throwable t) {
                 if (onError != null) onError.onError("Error de red: " + t.getMessage());
             }
         });
-
     }
 
 
@@ -573,6 +619,50 @@ public class FlightRepository {
             demoraDao.deleteByVuelo(vueloId);
             new android.os.Handler(android.os.Looper.getMainLooper()).post(onOk::run);
         });
+    }
+
+    public void eliminarDemoraLocalYServidor(long vueloId, OnOk onOk, @Nullable OnError onError) {
+        new Thread(() -> {
+            try {
+                // 1) Si no hay en local, da igual; seguimos
+                demoraDao.deleteByVuelo(vueloId);
+            } catch (Throwable ignore) {}
+
+            // 2) Buscar remota y borrar si existe
+            ApiService api = ApiClient.getClient().create(ApiService.class);
+            api.listarDemorasRaw(vueloId).enqueue(new retrofit2.Callback<com.google.gson.JsonElement>() {
+                @Override public void onResponse(retrofit2.Call<com.google.gson.JsonElement> call,
+                                                 retrofit2.Response<com.google.gson.JsonElement> resp) {
+                    if (!resp.isSuccessful() || !ApiJson.ok(resp.body())) {
+                        // si no se pudo consultar, igual completamos con local borrado
+                        if (onOk != null) onOk.run();
+                        return;
+                    }
+                    java.util.List<Demora> lista = ApiJson.getList(ApiJson.data(resp.body()), Demora.class);
+                    if (lista == null || lista.isEmpty()) {
+                        if (onOk != null) onOk.run();
+                        return;
+                    }
+                    long demoraId = lista.get(0).id; // 1 demora por vuelo
+                    api.eliminarDemoraRaw(vueloId, demoraId).enqueue(new retrofit2.Callback<com.google.gson.JsonElement>() {
+                        @Override public void onResponse(retrofit2.Call<com.google.gson.JsonElement> call,
+                                                         retrofit2.Response<com.google.gson.JsonElement> r2) {
+                            // no importa tanto la respuesta, consolidamos local:
+                            new Thread(() -> {
+                                try { demoraDao.deleteByVuelo(vueloId); } catch (Throwable ignore) {}
+                                if (onOk != null) onOk.run();
+                            }).start();
+                        }
+                        @Override public void onFailure(retrofit2.Call<com.google.gson.JsonElement> call, Throwable t) {
+                            if (onError != null) onError.onError("No se pudo borrar en servidor: " + t.getMessage());
+                        }
+                    });
+                }
+                @Override public void onFailure(retrofit2.Call<com.google.gson.JsonElement> call, Throwable t) {
+                    if (onError != null) onError.onError("No se pudo verificar demoras en servidor: " + t.getMessage());
+                }
+            });
+        }).start();
     }
 
 

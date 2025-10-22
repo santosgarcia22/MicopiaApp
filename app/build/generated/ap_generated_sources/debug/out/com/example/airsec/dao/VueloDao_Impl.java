@@ -40,7 +40,7 @@ public final class VueloDao_Impl implements VueloDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR ABORT INTO `control_aeronave_vuelos` (`id`,`fecha`,`origen`,`destino`,`numeroVueloLlegando`,`numeroVueloSaliendo`,`matricula`,`operadorId`,`posicionLlegada`,`horaLlegadaReal`,`horaSalidaItinerario`,`horaSalidaPushback`,`totalPax`,`coordinadorId`,`liderVueloId`,`app_bloqueado`,`app_cerrado`,`app_cerrado_at`,`created_by_user_id`,`created_at`,`updated_at`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `control_aeronave_vuelos` (`id`,`fecha`,`origen`,`destino`,`numeroVueloLlegando`,`numeroVueloSaliendo`,`matricula`,`operadorId`,`posicionLlegada`,`horaLlegadaReal`,`horaSalidaItinerario`,`horaSalidaPushback`,`totalPax`,`coordinadorId`,`liderVueloId`,`app_bloqueado`,`app_cerrado`,`app_cerrado_at`,`created_by_user_id`,`created_at`,`updated_at`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
