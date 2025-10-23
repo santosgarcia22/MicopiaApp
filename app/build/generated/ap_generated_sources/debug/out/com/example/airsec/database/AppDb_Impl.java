@@ -50,7 +50,7 @@ public final class AppDb_Impl extends AppDb {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(4) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(6) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `control_aeronave_vuelos` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `fecha` TEXT, `origen` TEXT, `destino` TEXT, `numeroVueloLlegando` TEXT, `numeroVueloSaliendo` TEXT, `matricula` TEXT, `operadorId` INTEGER, `posicionLlegada` TEXT, `horaLlegadaReal` TEXT, `horaSalidaItinerario` TEXT, `horaSalidaPushback` TEXT, `totalPax` INTEGER, `coordinadorId` INTEGER, `liderVueloId` INTEGER, `app_bloqueado` INTEGER NOT NULL, `app_cerrado` INTEGER NOT NULL, `app_cerrado_at` TEXT, `created_by_user_id` INTEGER, `created_at` TEXT, `updated_at` TEXT)");
@@ -61,15 +61,15 @@ public final class AppDb_Impl extends AppDb {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_control_aeronave_demoras_vuelo_id` ON `control_aeronave_demoras` (`vuelo_id`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `control_aeronave_tiempos_operativos` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `vuelo_id` INTEGER NOT NULL, `desabordaje_inicio` TEXT, `desabordaje_fin` TEXT, `abordaje_inicio` TEXT, `abordaje_fin` TEXT, `inspeccion_cabina_inicio` TEXT, `inspeccion_cabina_fin` TEXT, `aseo_ingreso` TEXT, `aseo_salida` TEXT, `tripulacion_ingreso` TEXT, `cierre_puerta` TEXT, `created_at` TEXT, `updated_at` TEXT, FOREIGN KEY(`vuelo_id`) REFERENCES `control_aeronave_vuelos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_control_aeronave_tiempos_operativos_vuelo_id` ON `control_aeronave_tiempos_operativos` (`vuelo_id`)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `accesos` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `vuelo_id` INTEGER NOT NULL, `nombre` TEXT, `identificacion` TEXT, `empresa` TEXT, `herramientas` INTEGER, `motivo_entrada` TEXT, `hora_entrada` TEXT, `hora_salida` TEXT, `hora_entrada1` TEXT, `hora_salida2` TEXT, `firma_path` TEXT, `created_at` TEXT, `updated_at` TEXT, FOREIGN KEY(`vuelo_id`) REFERENCES `control_aeronave_vuelos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_accesos_vuelo_id` ON `accesos` (`vuelo_id`)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_accesos_identificacion` ON `accesos` (`identificacion`)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_accesos_empresa` ON `accesos` (`empresa`)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `control_aeronave_accesos` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `server_id` INTEGER, `vuelo_id` INTEGER NOT NULL, `nombre` TEXT, `identificacion` TEXT, `empresa` TEXT, `herramientas` INTEGER, `motivo_entrada` TEXT, `hora_entrada` TEXT, `hora_salida` TEXT, `hora_entrada1` TEXT, `hora_salida2` TEXT, `firma_path` TEXT, `created_at` TEXT, `updated_at` TEXT, FOREIGN KEY(`vuelo_id`) REFERENCES `control_aeronave_vuelos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_control_aeronave_accesos_vuelo_id` ON `control_aeronave_accesos` (`vuelo_id`)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_control_aeronave_accesos_identificacion` ON `control_aeronave_accesos` (`identificacion`)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_control_aeronave_accesos_empresa` ON `control_aeronave_accesos` (`empresa`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `control_aeronave_operadores` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `codigo` TEXT, `nombre` TEXT, `created_at` TEXT, `updated_at` TEXT)");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_control_aeronave_operadores_codigo` ON `control_aeronave_operadores` (`codigo`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_control_aeronave_operadores_nombre` ON `control_aeronave_operadores` (`nombre`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8dd3bfa326419f8781d1b53335ba94f5')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '86e68c8f3a8b19ab0db2cf321d5a2675')");
       }
 
       @Override
@@ -77,7 +77,7 @@ public final class AppDb_Impl extends AppDb {
         db.execSQL("DROP TABLE IF EXISTS `control_aeronave_vuelos`");
         db.execSQL("DROP TABLE IF EXISTS `control_aeronave_demoras`");
         db.execSQL("DROP TABLE IF EXISTS `control_aeronave_tiempos_operativos`");
-        db.execSQL("DROP TABLE IF EXISTS `accesos`");
+        db.execSQL("DROP TABLE IF EXISTS `control_aeronave_accesos`");
         db.execSQL("DROP TABLE IF EXISTS `control_aeronave_operadores`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
@@ -202,33 +202,34 @@ public final class AppDb_Impl extends AppDb {
                   + " Expected:\n" + _infoControlAeronaveTiemposOperativos + "\n"
                   + " Found:\n" + _existingControlAeronaveTiemposOperativos);
         }
-        final HashMap<String, TableInfo.Column> _columnsAccesos = new HashMap<String, TableInfo.Column>(14);
-        _columnsAccesos.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("vuelo_id", new TableInfo.Column("vuelo_id", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("nombre", new TableInfo.Column("nombre", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("identificacion", new TableInfo.Column("identificacion", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("empresa", new TableInfo.Column("empresa", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("herramientas", new TableInfo.Column("herramientas", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("motivo_entrada", new TableInfo.Column("motivo_entrada", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("hora_entrada", new TableInfo.Column("hora_entrada", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("hora_salida", new TableInfo.Column("hora_salida", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("hora_entrada1", new TableInfo.Column("hora_entrada1", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("hora_salida2", new TableInfo.Column("hora_salida2", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("firma_path", new TableInfo.Column("firma_path", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("created_at", new TableInfo.Column("created_at", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsAccesos.put("updated_at", new TableInfo.Column("updated_at", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        final HashSet<TableInfo.ForeignKey> _foreignKeysAccesos = new HashSet<TableInfo.ForeignKey>(1);
-        _foreignKeysAccesos.add(new TableInfo.ForeignKey("control_aeronave_vuelos", "CASCADE", "NO ACTION", Arrays.asList("vuelo_id"), Arrays.asList("id")));
-        final HashSet<TableInfo.Index> _indicesAccesos = new HashSet<TableInfo.Index>(3);
-        _indicesAccesos.add(new TableInfo.Index("index_accesos_vuelo_id", false, Arrays.asList("vuelo_id"), Arrays.asList("ASC")));
-        _indicesAccesos.add(new TableInfo.Index("index_accesos_identificacion", false, Arrays.asList("identificacion"), Arrays.asList("ASC")));
-        _indicesAccesos.add(new TableInfo.Index("index_accesos_empresa", false, Arrays.asList("empresa"), Arrays.asList("ASC")));
-        final TableInfo _infoAccesos = new TableInfo("accesos", _columnsAccesos, _foreignKeysAccesos, _indicesAccesos);
-        final TableInfo _existingAccesos = TableInfo.read(db, "accesos");
-        if (!_infoAccesos.equals(_existingAccesos)) {
-          return new RoomOpenHelper.ValidationResult(false, "accesos(com.example.airsec.model.Acceso).\n"
-                  + " Expected:\n" + _infoAccesos + "\n"
-                  + " Found:\n" + _existingAccesos);
+        final HashMap<String, TableInfo.Column> _columnsControlAeronaveAccesos = new HashMap<String, TableInfo.Column>(15);
+        _columnsControlAeronaveAccesos.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("server_id", new TableInfo.Column("server_id", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("vuelo_id", new TableInfo.Column("vuelo_id", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("nombre", new TableInfo.Column("nombre", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("identificacion", new TableInfo.Column("identificacion", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("empresa", new TableInfo.Column("empresa", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("herramientas", new TableInfo.Column("herramientas", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("motivo_entrada", new TableInfo.Column("motivo_entrada", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("hora_entrada", new TableInfo.Column("hora_entrada", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("hora_salida", new TableInfo.Column("hora_salida", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("hora_entrada1", new TableInfo.Column("hora_entrada1", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("hora_salida2", new TableInfo.Column("hora_salida2", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("firma_path", new TableInfo.Column("firma_path", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("created_at", new TableInfo.Column("created_at", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsControlAeronaveAccesos.put("updated_at", new TableInfo.Column("updated_at", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysControlAeronaveAccesos = new HashSet<TableInfo.ForeignKey>(1);
+        _foreignKeysControlAeronaveAccesos.add(new TableInfo.ForeignKey("control_aeronave_vuelos", "CASCADE", "NO ACTION", Arrays.asList("vuelo_id"), Arrays.asList("id")));
+        final HashSet<TableInfo.Index> _indicesControlAeronaveAccesos = new HashSet<TableInfo.Index>(3);
+        _indicesControlAeronaveAccesos.add(new TableInfo.Index("index_control_aeronave_accesos_vuelo_id", false, Arrays.asList("vuelo_id"), Arrays.asList("ASC")));
+        _indicesControlAeronaveAccesos.add(new TableInfo.Index("index_control_aeronave_accesos_identificacion", false, Arrays.asList("identificacion"), Arrays.asList("ASC")));
+        _indicesControlAeronaveAccesos.add(new TableInfo.Index("index_control_aeronave_accesos_empresa", false, Arrays.asList("empresa"), Arrays.asList("ASC")));
+        final TableInfo _infoControlAeronaveAccesos = new TableInfo("control_aeronave_accesos", _columnsControlAeronaveAccesos, _foreignKeysControlAeronaveAccesos, _indicesControlAeronaveAccesos);
+        final TableInfo _existingControlAeronaveAccesos = TableInfo.read(db, "control_aeronave_accesos");
+        if (!_infoControlAeronaveAccesos.equals(_existingControlAeronaveAccesos)) {
+          return new RoomOpenHelper.ValidationResult(false, "control_aeronave_accesos(com.example.airsec.model.Acceso).\n"
+                  + " Expected:\n" + _infoControlAeronaveAccesos + "\n"
+                  + " Found:\n" + _existingControlAeronaveAccesos);
         }
         final HashMap<String, TableInfo.Column> _columnsControlAeronaveOperadores = new HashMap<String, TableInfo.Column>(5);
         _columnsControlAeronaveOperadores.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
@@ -249,7 +250,7 @@ public final class AppDb_Impl extends AppDb {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "8dd3bfa326419f8781d1b53335ba94f5", "19df5ed3f8290903edc566fd2065ee57");
+    }, "86e68c8f3a8b19ab0db2cf321d5a2675", "412a43bd583a1c4b3820572be9ebe0dd");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -260,7 +261,7 @@ public final class AppDb_Impl extends AppDb {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "control_aeronave_vuelos","control_aeronave_demoras","control_aeronave_tiempos_operativos","accesos","control_aeronave_operadores");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "control_aeronave_vuelos","control_aeronave_demoras","control_aeronave_tiempos_operativos","control_aeronave_accesos","control_aeronave_operadores");
   }
 
   @Override
@@ -279,7 +280,7 @@ public final class AppDb_Impl extends AppDb {
       _db.execSQL("DELETE FROM `control_aeronave_vuelos`");
       _db.execSQL("DELETE FROM `control_aeronave_demoras`");
       _db.execSQL("DELETE FROM `control_aeronave_tiempos_operativos`");
-      _db.execSQL("DELETE FROM `accesos`");
+      _db.execSQL("DELETE FROM `control_aeronave_accesos`");
       _db.execSQL("DELETE FROM `control_aeronave_operadores`");
       super.setTransactionSuccessful();
     } finally {

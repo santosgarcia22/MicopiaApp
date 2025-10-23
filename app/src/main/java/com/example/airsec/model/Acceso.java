@@ -9,7 +9,7 @@ import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
 
 @Entity(
-        tableName = "accesos",
+        tableName = "control_aeronave_accesos",
         foreignKeys = @ForeignKey(
                 entity = Vuelo.class,
                 parentColumns = "id",
@@ -22,6 +22,9 @@ public class Acceso {
 
     @PrimaryKey(autoGenerate = true)
     public long id;
+
+    @ColumnInfo(name = "server_id")
+    public Long serverId; //id del registro en el servidor laravel
 
     @ColumnInfo(name = "vuelo_id") public long vueloId;
 

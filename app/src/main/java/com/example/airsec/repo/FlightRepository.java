@@ -21,10 +21,16 @@ import com.example.airsec.network.ApiResponseSingle;
 import com.example.airsec.network.ApiService;
 import com.example.airsec.network.ApiClient;
 import com.example.airsec.network.ApiResponse;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Scanner;
 import java.util.TimeZone;
 import org.json.JSONObject;
 import java.util.List;
@@ -349,6 +355,29 @@ public class FlightRepository {
                     h.post(() -> Toast.makeText(appContext, "Error al enviar acceso (servidor) " + code, Toast.LENGTH_SHORT).show());
                 }
 
+                // === Guardar serverId si el backend lo retornó ===
+                try {
+                    String respStr = response.toString();
+                    org.json.JSONObject obj = new org.json.JSONObject(respStr);
+                    if (obj.optBoolean("ok")) {
+                        long srvId = 0;
+                        if (obj.has("data") && obj.get("data") instanceof org.json.JSONObject) {
+                            srvId = obj.getJSONObject("data").optLong("id", 0);
+                        }
+                        if (srvId == 0) {
+                            // algunos controladores devuelven { "ok":true, "id":123 } sin "data"
+                            srvId = obj.optLong("id", 0);
+                        }
+                        if (srvId > 0) {
+                            accesoFinal.serverId = srvId;
+                            AppDb.get(appContext).accesoDao().update(accesoFinal);
+                            android.util.Log.d("API_ACCESS_POST", "serverId guardado=" + srvId);
+                        }
+                    }
+                } catch (Exception ignore) {}
+
+
+
                 conn.disconnect();
 
             } catch (Exception e) {
@@ -362,17 +391,29 @@ public class FlightRepository {
 
     public void actualizarTiemposAccesoEnServidor(long vueloId, Acceso acceso) {
         new Thread(() -> {
+            java.net.HttpURLConnection conn = null; // <-- declarado fuera del try
             try {
                 String BASE_URL = "http://10.0.2.2:8000/api/v1/";
-                java.net.URL url = new java.net.URL(BASE_URL + "vuelos/" + vueloId + "/accesos/" + acceso.id);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+
+                long idServidor = (acceso.serverId != null && acceso.serverId > 0)
+                        ? acceso.serverId
+                        : buscarIdRemotoPorDoc(BASE_URL, vueloId, acceso.identificacion);
+
+                if (idServidor <= 0) {
+                    Log.e("API_ACCESS", "No se pudo resolver id remoto del acceso");
+                    return;
+                }
+
+                java.net.URL url = new java.net.URL(BASE_URL + "vuelos/" + vueloId + "/accesos/" + idServidor);
+                conn = (java.net.HttpURLConnection) url.openConnection(); // ← ahora visible en todo el bloque
                 conn.setRequestMethod("PUT");
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                conn.setRequestProperty("Accept", "application/json");
                 conn.setDoOutput(true);
 
-                JSONObject json = new JSONObject();
-                json.put("hora_salida", extraerHora(acceso.horaSalida));
-                json.put("hora_entrada1", extraerHora(acceso.horaEntrada1));
+                org.json.JSONObject json = new org.json.JSONObject();
+                json.put("hora_salida",  extraerHora(acceso.horaSalida));
+                json.put("hora_entrada1",extraerHora(acceso.horaEntrada1));
                 json.put("hora_salida2", extraerHora(acceso.horaSalida2));
 
                 Log.d("API_ACCESS", "📤 JSON a enviar: " + json.toString());
@@ -384,18 +425,62 @@ public class FlightRepository {
                 int code = conn.getResponseCode();
                 Log.d("API_ACCESS", "📡 Código HTTP: " + code);
 
-                java.io.InputStream is = (code < 400)
-                        ? conn.getInputStream()
-                        : conn.getErrorStream();
+                java.io.InputStream is = (code < 400) ? conn.getInputStream() : conn.getErrorStream();
+                String respStr;
+                try (java.util.Scanner sc = new java.util.Scanner(is).useDelimiter("\\A")) {
+                    respStr = sc.hasNext() ? sc.next() : "";
+                }
+                Log.d("API_ACCESS", "📥 Respuesta del servidor: " + respStr);
 
-                String response = new java.util.Scanner(is).useDelimiter("\\A").next();
-                Log.d("API_ACCESS", "📥 Respuesta del servidor: " + response);
+                // Parsear JSON si devuelve algo útil
+                try {
+                    org.json.JSONObject o = new org.json.JSONObject(respStr);
+                    if (o.optBoolean("ok") && acceso.serverId == null) {
+                        if (o.has("data") && o.get("data") instanceof org.json.JSONObject) {
+                            long sid = o.getJSONObject("data").optLong("id", 0);
+                            if (sid > 0) {
+                                acceso.serverId = sid;
+                                AppDb.get(appContext).accesoDao().update(acceso);
+                            }
+                        }
+                    }
+                } catch (Exception ignore) {}
 
-                conn.disconnect();
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                if (conn != null) conn.disconnect(); // ← ahora puedes usarlo sin error
             }
         }).start();
+    }
+
+
+    private long buscarIdRemotoPorDoc(String BASE_URL, long vueloId, String doc) {
+        if (doc == null || doc.trim().isEmpty()) return 0;
+        java.net.HttpURLConnection c = null;
+        try {
+            // si tu index acepta ?identificacion=... (ver paso 4)
+            String urlStr = BASE_URL + "vuelos/" + vueloId + "/accesos?identificacion=" + java.net.URLEncoder.encode(doc, "UTF-8");
+            java.net.URL url = new java.net.URL(urlStr);
+            c = (java.net.HttpURLConnection) url.openConnection();
+            c.setRequestProperty("Accept", "application/json");
+            int code = c.getResponseCode();
+            java.io.InputStream is = (code < 400) ? c.getInputStream() : c.getErrorStream();
+            String resp = new java.util.Scanner(is).useDelimiter("\\A").next();
+            org.json.JSONObject o = new org.json.JSONObject(resp);
+            if (o.optBoolean("ok") && o.has("data")) {
+                org.json.JSONArray arr = o.optJSONArray("data");
+                if (arr != null && arr.length() > 0) {
+                    org.json.JSONObject item = arr.getJSONObject(0);
+                    return item.optLong("id", 0);
+                }
+            }
+        } catch (Exception e) {
+            Log.e("API_ACCESS", "buscarIdRemotoPorDoc error: " + e.getMessage());
+        } finally {
+            if (c != null) c.disconnect();
+        }
+        return 0;
     }
 
 

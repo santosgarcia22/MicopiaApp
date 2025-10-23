@@ -24,15 +24,14 @@ public interface AccesoDao {
     void delete(Acceso a);
 
     // 🔹 Todos los accesos de un vuelo
-    @Query("SELECT * FROM accesos WHERE vuelo_id = :vueloId ORDER BY nombre ASC")
+    @Query("SELECT * FROM control_aeronave_accesos WHERE vuelo_id = :vueloId ORDER BY nombre ASC")
     List<Acceso> byVuelo(long vueloId);
 
-    // 🔹 Buscar acceso por vuelo y documento (identificación)
-    @Query("SELECT * FROM accesos WHERE vuelo_id = :vueloId AND identificacion = :doc LIMIT 1")
+    @Query("SELECT * FROM control_aeronave_accesos WHERE vuelo_id = :vueloId AND identificacion = :doc LIMIT 1")
     Acceso findByDoc(long vueloId, String doc);
 
-    // 🔹 Alias del mismo (si quieres mantener compatibilidad)
-    @Query("SELECT * FROM accesos WHERE vuelo_id = :vueloId AND identificacion = :doc LIMIT 1")
+    @Query("SELECT * FROM control_aeronave_accesos WHERE vuelo_id = :vueloId AND identificacion = :doc LIMIT 1")
     Acceso byVueloAndDoc(long vueloId, String doc);
+
 }
 
